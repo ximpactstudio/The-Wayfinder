@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>WAYFINDER</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,700;9..40,900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#2BEBCB;--accent:#FF9BFC;--blk:#000;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-l:env(safe-area-inset-left,0px);
+  --safe-r:env(safe-area-inset-right,0px);
+}
+html,body{
+  height:100%;height:-webkit-fill-available;
+  overflow:hidden;overscroll-behavior:none;
+  font-family:"DM Sans",system-ui,sans-serif;
+  background:var(--bg);transition:background .5s cubic-bezier(.4,0,.2,1);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* BLOBS */
+.blobs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.blob{position:absolute;background:var(--accent);transition:background .5s cubic-bezier(.4,0,.2,1)}
+.blob-a{width:clamp(220px,60vw,600px);height:clamp(220px,60vw,600px);top:-8%;right:-6%;border-radius:42% 58% 70% 30%/45% 45% 55% 55%;animation:ma 14s ease-in-out infinite}
+.blob-b{width:clamp(160px,42vw,460px);height:clamp(160px,42vw,460px);bottom:4%;left:-5%;border-radius:70% 30% 30% 70%/70% 70% 30% 30%;animation:mb 11s ease-in-out infinite}
+.blob-c{width:clamp(40px,10vw,120px);height:clamp(40px,10vw,120px);top:30%;left:8%;border-radius:50%;animation:mc 9s ease-in-out infinite 2s;opacity:.6}
+@keyframes ma{0%,100%{border-radius:42% 58% 70% 30%/45% 45% 55% 55%}25%{border-radius:70% 30% 46% 54%/30% 69% 31% 70%}50%{border-radius:46% 54% 30% 70%/69% 31% 69% 31%}75%{border-radius:30% 70% 70% 30%/52% 52% 48% 48%}}
+@keyframes mb{0%,100%{border-radius:70% 30% 30% 70%/70% 70% 30% 30%}33%{border-radius:30% 70% 70% 30%/30% 52% 48% 70%}66%{border-radius:50% 50% 40% 60%/60% 40% 60% 40%}}
+@keyframes mc{0%,100%{border-radius:50%;transform:translate(0,0)}50%{border-radius:40% 60%/60% 40%;transform:translate(16px,-12px)}}
+
+/* OVERLAY */
+#overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s ease}
+#overlay.show{opacity:1;pointer-events:all}
+#anim-canvas{position:absolute;inset:0;width:100%;height:100%}
+#overlay-msg{position:relative;z-index:2;color:#fff;font-size:clamp(3rem,15vw,6rem);font-weight:900;letter-spacing:-.04em;pointer-events:none}
+
+/* FOOTER */
+.footer{
+  position:fixed;bottom:0;left:0;right:0;
+  padding:.6rem 1.4rem calc(.6rem + var(--safe-b)) 1.4rem;
+  display:flex;justify-content:space-between;align-items:center;
+  border-top:2px solid var(--blk);z-index:20;
+}
+.footer-logo{display:flex;align-items:center;gap:0;line-height:1;user-select:none}
+.logo-adc{font-size:clamp(14px,3.8vw,20px);font-weight:900;letter-spacing:-.03em;color:var(--blk)}
+.logo-sep{font-size:clamp(12px,3.2vw,17px);font-weight:300;color:var(--blk);opacity:.5;margin:0 clamp(5px,1.4vw,8px)}
+.logo-cf{font-size:clamp(11px,3vw,16px);font-weight:700;letter-spacing:.04em;color:var(--blk)}
+.footer-date{font-size:clamp(.62rem,2.2vw,.8rem);font-weight:400;color:var(--blk);opacity:.65}
+
+/* SCREENS */
+.screen{
+  position:fixed;inset:0;
+  padding:calc(1.5rem + var(--safe-t)) 1.4rem calc(5.5rem + var(--safe-b));
+  display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+  z-index:1;opacity:0;transform:translateY(14px);pointer-events:none;
+  transition:opacity .32s ease,transform .32s ease;
+  overflow:hidden;
+}
+.screen.active{opacity:1;transform:translateY(0);pointer-events:all}
+
+/* LABELS & BADGES */
+.eyebrow{font-size:clamp(.68rem,2.8vw,.82rem);font-weight:700;letter-spacing:.14em;color:var(--blk);text-transform:uppercase;margin-bottom:.75rem;position:relative;z-index:2}
+.badge{display:inline-block;background:var(--blk);color:var(--bg);font-size:clamp(.62rem,2.5vw,.72rem);font-weight:900;letter-spacing:.1em;text-transform:uppercase;padding:.32rem .65rem;margin-bottom:.9rem;position:relative;z-index:2}
+
+/* BUTTONS */
+.btn-row{display:flex;gap:.65rem;flex-wrap:wrap;position:relative;z-index:2}
+.btn-main{
+  background:var(--blk);color:var(--bg);border:none;
+  font-family:"DM Sans",system-ui,sans-serif;font-size:clamp(.95rem,3.5vw,1.15rem);
+  font-weight:900;letter-spacing:-.01em;text-transform:uppercase;
+  padding:1rem 1.5rem;cursor:pointer;
+  min-height:52px;min-width:140px;
+  touch-action:manipulation;user-select:none;
+  transition:transform .1s,opacity .1s;
+}
+.btn-main:active{transform:scale(.95);opacity:.85}
+.btn-ghost{
+  background:transparent;border:2px solid var(--blk);color:var(--blk);
+  font-family:"DM Sans",system-ui,sans-serif;font-size:clamp(.78rem,3vw,.88rem);
+  font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:.85rem 1.2rem;cursor:pointer;
+  min-height:52px;
+  touch-action:manipulation;user-select:none;
+  transition:background .18s,color .18s,transform .1s;
+}
+.btn-ghost:active{background:var(--blk);color:var(--bg);transform:scale(.96)}
+
+/* LANDING */
+.landing-title{font-size:clamp(4.5rem,19vw,11rem);font-weight:900;line-height:.88;letter-spacing:-.04em;color:var(--blk);margin-bottom:1.2rem;position:relative;z-index:2;user-select:none}
+.landing-sub{font-size:clamp(.82rem,3.2vw,.98rem);color:var(--blk);margin-bottom:2rem;max-width:90vw;line-height:1.55;opacity:.68;position:relative;z-index:2}
+
+/* SPIN */
+.spin-text{font-size:clamp(1.7rem,7vw,4.8rem);font-weight:900;line-height:1.05;letter-spacing:-.03em;color:var(--blk);max-width:90vw;position:relative;z-index:2;min-height:30vh;display:flex;align-items:flex-start}
+.spin-text.spinning{animation:flick .09s steps(1) infinite}
+@keyframes flick{0%{opacity:1}50%{opacity:.5}}
+
+/* PROMPT */
+.prompt-text{font-size:clamp(1.8rem,6.5vw,4.2rem);font-weight:900;line-height:1.06;letter-spacing:-.03em;color:var(--blk);max-width:92vw;margin-bottom:1.2rem;position:relative;z-index:2}
+.prompt-text.enter{animation:up .38s cubic-bezier(.2,0,0,1) both}
+@keyframes up{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.prompt-text.glitch{animation:glitch .45s steps(2) 3}
+@keyframes glitch{0%{transform:translate(0);filter:none}20%{transform:translate(-5px,3px);filter:hue-rotate(90deg)}40%{transform:translate(5px,-3px);filter:hue-rotate(180deg)}60%{transform:translate(-3px,0);filter:none}80%{transform:translate(3px,2px);filter:hue-rotate(45deg)}100%{transform:translate(0);filter:none}}
+.prompt-instr{font-size:clamp(.78rem,3vw,.9rem);color:var(--blk);opacity:.62;margin-bottom:1.8rem;line-height:1.55;position:relative;z-index:2;max-width:88vw}
+.prompt-instr strong{font-weight:900;opacity:1}
+
+/* TIMER */
+.timer-label{font-size:clamp(.68rem,2.8vw,.82rem);font-weight:700;letter-spacing:.14em;color:var(--blk);text-transform:uppercase;margin-bottom:.35rem;position:relative;z-index:2}
+.timer-big{font-size:clamp(5rem,24vw,15rem);font-weight:900;line-height:1;letter-spacing:-.05em;color:var(--blk);position:relative;z-index:2;font-variant-numeric:tabular-nums;touch-action:manipulation;user-select:none;cursor:pointer;padding:.2rem 0}
+.timer-big:active{opacity:.75}
+.timer-big.done{animation:pulse .9s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.015)}}
+.timer-halfway{font-size:clamp(.72rem,3vw,.88rem);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blk);margin-top:.8rem;position:relative;z-index:2;opacity:0;transform:translateY(6px);transition:opacity .6s,transform .6s}
+.timer-halfway.show{opacity:1;transform:translateY(0)}
+.timer-echo{font-size:clamp(.78rem,3vw,.92rem);color:var(--blk);max-width:88vw;line-height:1.5;margin-top:1.2rem;opacity:.4;position:relative;z-index:2}
+.tap-hint{font-size:clamp(.6rem,2.5vw,.7rem);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blk);opacity:.3;margin-top:.4rem;position:relative;z-index:2}
+
+/* MIRROR */
+.mirror-title{font-size:clamp(2rem,8vw,4.8rem);font-weight:900;line-height:.95;letter-spacing:-.04em;color:var(--blk);margin-bottom:1.2rem;position:relative;z-index:2;max-width:88vw}
+.mirror-sub{font-size:clamp(.68rem,2.8vw,.8rem);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blk);opacity:.55;margin-bottom:1rem;position:relative;z-index:2}
+.mirror-qs{list-style:none;margin-bottom:1.8rem;position:relative;z-index:2;max-width:min(560px,92vw);counter-reset:item}
+.mirror-qs li{font-size:clamp(.85rem,3.2vw,1rem);font-weight:400;color:var(--blk);line-height:1.45;padding:.55rem 0;border-bottom:1px solid rgba(0,0,0,.15);counter-increment:item}
+.mirror-qs li:last-child{border-bottom:none}
+.mirror-qs li::before{content:counter(item) ".";font-weight:900;margin-right:.45rem}
+
+/* COMPASS */
+.compass-title{font-size:clamp(2.8rem,11vw,6.5rem);font-weight:900;line-height:.93;letter-spacing:-.04em;color:var(--blk);margin-bottom:1.8rem;position:relative;z-index:2;user-select:none}
+.compass-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;width:min(440px,92vw);position:relative;z-index:2}
+.compass-btn{background:var(--blk);color:var(--bg);border:none;font-family:"DM Sans",system-ui,sans-serif;font-size:clamp(.9rem,3.5vw,1.15rem);font-weight:900;letter-spacing:-.02em;text-transform:uppercase;padding:1.25rem .9rem;cursor:pointer;text-align:left;line-height:1.1;min-height:72px;touch-action:manipulation;user-select:none;transition:transform .1s,opacity .1s}
+.compass-btn:active{transform:scale(.95);opacity:.8}
+
+/* END */
+.end-title{font-size:clamp(1.9rem,7.5vw,4.8rem);font-weight:900;line-height:1;letter-spacing:-.04em;color:var(--blk);margin-bottom:1.4rem;position:relative;z-index:2;max-width:88vw}
+.end-area{background:transparent;border:none;border-bottom:3px solid var(--blk);color:var(--blk);font-family:"DM Sans",system-ui,sans-serif;font-size:clamp(.92rem,3.5vw,1.1rem);padding:.5rem 0;width:min(500px,90vw);min-height:72px;resize:none;margin-bottom:1.6rem;position:relative;z-index:2;outline:none;line-height:1.6;caret-color:var(--blk);-webkit-appearance:none}
+.end-area::placeholder{color:rgba(0,0,0,.3)}
+/* TIMER CONTROLS */
+.timer-controls{display:flex;gap:.6rem;margin-top:1.6rem;position:relative;z-index:2}
+.tc-btn{
+  flex:1;background:var(--blk);color:var(--bg);border:none;
+  font-family:"DM Sans",system-ui,sans-serif;font-size:clamp(.72rem,2.8vw,.85rem);
+  font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+  padding:.85rem .5rem;min-height:52px;
+  touch-action:manipulation;user-select:none;
+  transition:transform .1s,opacity .1s;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:.2rem;cursor:pointer;
+}
+.tc-btn:active{transform:scale(.93);opacity:.8}
+.tc-icon{font-size:clamp(1rem,4vw,1.3rem);line-height:1}
+.tc-btn.ghost{background:transparent;border:2px solid var(--blk);color:var(--blk)}
+/* MIRROR TIMER */
+.mtimer-prompt{font-size:clamp(.8rem,3vw,.95rem);color:var(--blk);opacity:.55;line-height:1.5;max-width:88vw;margin-bottom:.6rem;position:relative;z-index:2;font-style:italic}
+.mtimer-qs{list-style:none;margin-bottom:1.2rem;position:relative;z-index:2;max-width:min(520px,92vw);counter-reset:mitem}
+.mtimer-qs li{font-size:clamp(.78rem,3vw,.9rem);color:var(--blk);line-height:1.4;padding:.4rem 0;border-bottom:1px solid rgba(0,0,0,.12);counter-increment:mitem}
+.mtimer-qs li:last-child{border-bottom:none}
+.mtimer-qs li::before{content:counter(mitem) ".";font-weight:900;margin-right:.4rem}
+</style>
+</head>
+<body>
+<div class="blobs"><div class="blob blob-a"></div><div class="blob blob-b"></div><div class="blob blob-c"></div></div>
+
+<div id="overlay"><canvas id="anim-canvas"></canvas><div id="overlay-msg"></div></div>
+
+<footer class="footer">
+  <span class="footer-logo"><span class="logo-adc">ADC</span><span class="logo-sep">&#8202;|&#8202;</span><span class="logo-cf">CLEVER&#176;FRANKE</span></span>
+  <span class="footer-date">8.4.26</span>
+</footer>
+
+<div class="screen active" id="s-landing">
+  <div class="landing-title">WAY<br>FINDER</div>
+  <p class="landing-sub">One prompt. Two speakers. Seven minutes each.</p>
+  <div class="btn-row">
+    <button class="btn-main" id="btn-spin">Find your signal</button>
+    <button class="btn-ghost" id="btn-compass">Compass mode</button>
+  </div>
+</div>
+
+<div class="screen" id="s-spin">
+  <div class="eyebrow" id="spin-label">Scanning signals</div>
+  <div class="spin-text" id="spin-text">&#8212;</div>
+</div>
+
+<div class="screen" id="s-prompt">
+  <div class="badge" id="round-badge">Round 1 of 2</div>
+  <div class="eyebrow" id="prompt-eyebrow">Your signal</div>
+  <div class="prompt-text" id="prompt-text"></div>
+  <p class="prompt-instr" id="prompt-instr"><strong>Speaker:</strong> talk non-stop for 7 minutes.<br><strong>Mirror:</strong> listen silently, observe everything.</p>
+  <div class="btn-row">
+    <button class="btn-main" id="btn-start-timer">Start 7:00</button>
+    <button class="btn-ghost" id="btn-new">New signal</button>
+  </div>
+</div>
+
+<div class="screen" id="s-timer">
+  <div class="timer-label" id="timer-label">Round 1 &mdash; Speak</div>
+  <div class="timer-big" id="timer-big">7:00</div>
+  <div class="timer-halfway" id="timer-halfway">&#8595; Halfway &mdash; keep going</div>
+  <div class="timer-echo" id="timer-echo"></div>
+  <div class="timer-controls">
+    <button class="tc-btn ghost" id="tc-restart"><span class="tc-icon">&#8635;</span>Restart</button>
+    <button class="tc-btn" id="tc-pause"><span class="tc-icon" id="tc-pause-icon">&#9646;&#9646;</span><span id="tc-pause-label">Pause</span></button>
+    <button class="tc-btn" id="tc-skip"><span class="tc-icon">&#9654;&#9654;</span>Mirror</button>
+  </div>
+</div>
+<div class="screen" id="s-mirror-timer">
+  <div class="badge" id="mt-badge">Mirror speaks &mdash; 3 min</div>
+  <div class="timer-label" id="mt-label">Share what you observed</div>
+  <div class="timer-big" id="mt-big">3:00</div>
+  <div class="timer-halfway" id="mt-halfway">&#8595; Halfway &mdash; try a question</div>
+  <p class="mtimer-prompt" id="mt-prompt-echo"></p>
+  <ul class="mtimer-qs" id="mt-qs"></ul>
+  <div class="timer-controls">
+    <button class="tc-btn ghost" id="mtc-restart"><span class="tc-icon">&#8635;</span>Restart</button>
+    <button class="tc-btn" id="mtc-pause"><span class="tc-icon" id="mtc-pause-icon">&#9646;&#9646;</span><span id="mtc-pause-label">Pause</span></button>
+    <button class="tc-btn" id="mtc-skip"><span class="tc-icon">&#9654;&#9654;</span>Next</button>
+  </div>
+</div>
+
+<div class="screen" id="s-mirror">
+  <div class="badge" id="mirror-badge">Round 1 complete</div>
+  <div class="mirror-title">Mirror,<br>share back.</div>
+  <div class="mirror-sub">3 questions to guide you</div>
+  <ul class="mirror-qs" id="mirror-qs"></ul>
+  <div class="btn-row">
+    <button class="btn-main" id="btn-mirror-next">Start Round 2</button>
+    <button class="btn-ghost" id="btn-mirror-home">Home</button>
+  </div>
+</div>
+
+<div class="screen" id="s-compass">
+  <div class="compass-title">Choose<br>your<br>direction</div>
+  <div class="compass-grid">
+    <button class="compass-btn" data-dir="reflect">&#8617; Reflect</button>
+    <button class="compass-btn" data-dir="act">&#8594; Act</button>
+    <button class="compass-btn" data-dir="letgo">&#215; Let go</button>
+    <button class="compass-btn" data-dir="forward">&#8593; Move<br>forward</button>
+  </div>
+</div>
+
+<div class="screen" id="s-end">
+  <div class="end-title">What are you taking with you?</div>
+  <textarea class="end-area" id="end-area" placeholder="Write it here" rows="3"></textarea>
+  <div class="btn-row">
+    <button class="btn-main" id="btn-again">Start again</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var PROMPTS = {
+  all:[
+    "What's something you've been overthinking instead of just trying?",
+    "What slows your learning down more than it should?",
+    "What question have you been avoiding asking?",
+    "Right now, what feels unclear but important?",
+    "If you trusted yourself more, what direction would you move in?",
+    "What signals are you noticing about what might be next for you?",
+    "What are you holding onto that might not be needed anymore?",
+    "If the next step didn't have to be perfect, what would it be?",
+    "Your future self is giving you advice. What do they say?",
+    "What would you do if you knew no one was judging you?",
+    "What's the smallest move that could change everything?",
+    "Where are you playing it safe when you don't need to?",
+    "What do you already know that you haven't acted on yet?",
+    "What would feel like relief to finally say out loud?"
+  ],
+  reflect:[
+    "What slows your learning down more than it should?",
+    "Right now, what feels unclear but important?",
+    "What signals are you noticing about what might be next for you?",
+    "Your future self is giving you advice. What do they say?",
+    "What do you already know that you haven't acted on yet?"
+  ],
+  act:[
+    "What's something you've been overthinking instead of just trying?",
+    "If you trusted yourself more, what direction would you move in?",
+    "If the next step didn't have to be perfect, what would it be?",
+    "What's the smallest move that could change everything?",
+    "What would you do if you knew no one was judging you?"
+  ],
+  letgo:[
+    "What question have you been avoiding asking?",
+    "What are you holding onto that might not be needed anymore?",
+    "Where are you playing it safe when you don't need to?",
+    "What would feel like relief to finally say out loud?"
+  ],
+  forward:[
+    "If the next step didn't have to be perfect, what would it be?",
+    "What signals are you noticing about what might be next for you?",
+    "If you trusted yourself more, what direction would you move in?",
+    "What's the smallest move that could change everything?",
+    "Your future self is giving you advice. What do they say?"
+  ]
+};
+
+var GLITCH_PROMPTS = [
+  "What would happen if you actually trusted the pull?",
+  "What's the thing only you can see from where you stand?",
+  "Where does the map end and the territory begin?",
+  "What are you pretending not to know?",
+  "What would the version of you who figures it out do first?"
+];
+
+var MIRROR_POOL = [
+  "What moment seemed most alive when they were speaking?",
+  "What were they circling around without quite landing on?",
+  "What surprised you about what came out?",
+  "Where did their energy shift, up or down?",
+  "Was there something they kept returning to?",
+  "What felt like the real thing underneath everything they said?",
+  "What do you think they most needed to hear from themselves?",
+  "What did you notice that they might not have noticed in themselves?",
+  "When did they sound most certain, and does that feel right to you?",
+  "What question do you think they were really asking?",
+  "What would you reflect back as the single most important thing?",
+  "Where did they come alive, and where did they go quiet?"
+];
+
+var ANIM_LABELS = ["Time!", "Done!", "Signal!", "Now!", "Complete!", "Go!"];
+
+var COLORS = [
+  {bg:"#2BEBCB",ac:"#FF9BFC"},
+  {bg:"#FF9BFC",ac:"#2BEBCB"},
+  {bg:"#A187FF",ac:"#2BEBCB"},
+  {bg:"#58EB81",ac:"#FF9BFC"},
+  {bg:"#FFF347",ac:"#A187FF"},
+  {bg:"#E5C574",ac:"#FF9BFC"}
+];
+
+var colorIdx=0, currentPrompt="", timerSecs=420;
+var timerInterval=null, paused=false, activeScreen="s-landing";
+var round=1, soundIdx=0, animIdx=0, audioCtx=null;
+
+var root=document.documentElement;
+
+function setColor(c){
+  root.style.setProperty("--bg",c.bg);
+  root.style.setProperty("--ac",c.ac);
+  document.body.style.backgroundColor=c.bg;
+  var blobs=document.querySelectorAll(".blob");
+  blobs.forEach(function(b){b.style.background=c.ac;});
+}
+function nextColor(){colorIdx=(colorIdx+1)%COLORS.length;setColor(COLORS[colorIdx]);}
+function show(id){
+  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
+  document.getElementById(id).classList.add("active");
+  activeScreen=id;
+}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function shuffle(arr){
+  var a=arr.slice();
+  for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}
+  return a;
+}
+function goHome(){stopTimer();nextColor();show("s-landing");}
+
+/* ---------- AUDIO ---------- */
+function getCtx(){
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+function playSound(n){
+  var ctx=getCtx();
+  var idx=n%6;
+  if(idx===0) sCosmicBell(ctx);
+  else if(idx===1) sRisingPulse(ctx);
+  else if(idx===2) sCrystalChime(ctx);
+  else if(idx===3) sDeepDrone(ctx);
+  else if(idx===4) sSignalBurst(ctx);
+  else sWarpSpeed(ctx);
+}
+function sCosmicBell(ctx){
+  var t=ctx.currentTime;
+  [[440,1],[880,.6],[1320,.35],[2200,.2]].forEach(function(pair,i){
+    var f=pair[0],g=pair[1];
+    var osc=ctx.createOscillator(),gn=ctx.createGain();
+    osc.type="sine";osc.frequency.setValueAtTime(f,t);
+    gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(g*.5,t+.02);
+    gn.gain.exponentialRampToValueAtTime(.0001,t+3+i*.5);
+    osc.connect(gn);gn.connect(ctx.destination);osc.start(t);osc.stop(t+4);
+  });
+}
+function sRisingPulse(ctx){
+  var t=ctx.currentTime;
+  var osc=ctx.createOscillator(),gn=ctx.createGain();
+  var lfo=ctx.createOscillator(),lg=ctx.createGain();
+  osc.type="sine";osc.frequency.setValueAtTime(180,t);osc.frequency.exponentialRampToValueAtTime(1800,t+2.5);
+  lfo.type="sine";lfo.frequency.setValueAtTime(8,t);lg.gain.setValueAtTime(50,t);
+  lfo.connect(lg);lg.connect(osc.frequency);
+  gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(.45,t+.1);gn.gain.exponentialRampToValueAtTime(.0001,t+2.8);
+  osc.connect(gn);gn.connect(ctx.destination);osc.start(t);osc.stop(t+3);lfo.start(t);lfo.stop(t+3);
+}
+function sCrystalChime(ctx){
+  var t=ctx.currentTime;
+  [2000,2500,3000,3600,4400].forEach(function(f,i){
+    var osc=ctx.createOscillator(),gn=ctx.createGain();
+    var d=i*.11;
+    osc.type="sine";osc.frequency.setValueAtTime(f,t+d);
+    gn.gain.setValueAtTime(0,t+d);gn.gain.linearRampToValueAtTime(.4,t+d+.01);gn.gain.exponentialRampToValueAtTime(.0001,t+d+1.3);
+    osc.connect(gn);gn.connect(ctx.destination);osc.start(t+d);osc.stop(t+d+1.5);
+  });
+}
+function sDeepDrone(ctx){
+  var t=ctx.currentTime;
+  [[80,1],[160,.5],[240,.25]].forEach(function(pair){
+    var f=pair[0],g=pair[1];
+    var osc=ctx.createOscillator(),gn=ctx.createGain();
+    osc.type="sine";osc.frequency.setValueAtTime(f,t);
+    gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(g*.55,t+.4);gn.gain.setValueAtTime(g*.55,t+1.6);gn.gain.exponentialRampToValueAtTime(.0001,t+4);
+    osc.connect(gn);gn.connect(ctx.destination);osc.start(t);osc.stop(t+4.5);
+  });
+}
+function sSignalBurst(ctx){
+  var t=ctx.currentTime;
+  [440,550,660,880,1100,880,660].forEach(function(f,i){
+    var osc=ctx.createOscillator(),gn=ctx.createGain();
+    var d=i*.08;
+    osc.type="square";osc.frequency.setValueAtTime(f,t+d);
+    gn.gain.setValueAtTime(.28,t+d);gn.gain.exponentialRampToValueAtTime(.0001,t+d+.12);
+    osc.connect(gn);gn.connect(ctx.destination);osc.start(t+d);osc.stop(t+d+.15);
+  });
+}
+function sWarpSpeed(ctx){
+  var t=ctx.currentTime;
+  var osc=ctx.createOscillator(),gn=ctx.createGain();
+  osc.type="sawtooth";
+  osc.frequency.setValueAtTime(2200,t);osc.frequency.exponentialRampToValueAtTime(80,t+1.1);osc.frequency.exponentialRampToValueAtTime(1400,t+2.6);
+  gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(.38,t+.05);gn.gain.setValueAtTime(.38,t+2.1);gn.gain.exponentialRampToValueAtTime(.0001,t+3);
+  osc.connect(gn);gn.connect(ctx.destination);osc.start(t);osc.stop(t+3.5);
+}
+
+/* ---------- CANVAS ANIMATIONS ---------- */
+var canvas=document.getElementById("anim-canvas");
+var c2=canvas.getContext("2d");
+var animRAF=null;
+
+function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+window.addEventListener("resize",resizeCanvas);resizeCanvas();
+
+function seeded(seed){
+  var s=seed;
+  return function(){s=(s*16807)%2147483647;return(s-1)/2147483646;};
+}
+
+function runAnim(idx,onDone){
+  if(animRAF){cancelAnimationFrame(animRAF);animRAF=null;}
+  c2.clearRect(0,0,canvas.width,canvas.height);
+  var n=idx%6, dur=3200, start=performance.now();
+  var bg=COLORS[colorIdx].bg, ac=COLORS[colorIdx].ac;
+  function frame(now){
+    var t=Math.min((now-start)/dur,1);
+    c2.clearRect(0,0,canvas.width,canvas.height);
+    var alpha=t<.15?t/.15:t>.78?(1-t)/.22:1;
+    c2.globalAlpha=alpha;
+    if(n===0)aPortalRings(t,bg,ac);
+    else if(n===1)aParticles(t,bg,ac);
+    else if(n===2)aStarWarp(t,bg,ac);
+    else if(n===3)aOrbitals(t,bg,ac);
+    else if(n===4)aCascade(t,bg,ac);
+    else aBloom(t,bg,ac);
+    c2.globalAlpha=1;
+    if(t<1)animRAF=requestAnimationFrame(frame);
+    else{c2.clearRect(0,0,canvas.width,canvas.height);if(onDone)onDone();}
+  }
+  animRAF=requestAnimationFrame(frame);
+}
+
+function aPortalRings(t,bg,ac){
+  var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
+  var maxR=Math.sqrt(W*W+H*H)*.6;
+  for(var i=0;i<8;i++){
+    var ph=i/8,r=((t+ph)%1)*maxR,a=1-((t+ph)%1);
+    c2.strokeStyle=i%2===0?ac:"#ffffff";c2.lineWidth=2+i*1.5;
+    var prev=c2.globalAlpha;c2.globalAlpha*=a;
+    c2.beginPath();c2.arc(cx,cy,r,0,Math.PI*2);c2.stroke();
+    c2.globalAlpha=prev;
+  }
+}
+function aParticles(t,bg,ac){
+  var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
+  var count=70;
+  var ease=t<.5?2*t*t:(4-2*t)*t-1;
+  for(var i=0;i<count;i++){
+    var angle=(i/count)*Math.PI*2;
+    var spd=120+((i*37)%200);
+    var r=ease*spd;
+    var x=cx+Math.cos(angle)*r,y=cy+Math.sin(angle)*r;
+    var sz=(1-t)*9+1.5;
+    c2.fillStyle=i%3===0?ac:"#ffffff";
+    c2.beginPath();c2.arc(x,y,sz,0,Math.PI*2);c2.fill();
+  }
+}
+function aStarWarp(t,bg,ac){
+  var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
+  var rng=seeded(42);
+  for(var i=0;i<100;i++){
+    var angle=rng()*Math.PI*2;
+    var startR=rng()*20+5;
+    var endR=Math.max(W,H)*.75;
+    var r=startR+(endR-startR)*t;
+    var len=t*22+2;
+    var x=cx+Math.cos(angle)*r,y=cy+Math.sin(angle)*r;
+    var x0=cx+Math.cos(angle)*(r-len),y0=cy+Math.sin(angle)*(r-len);
+    c2.strokeStyle=i%4===0?ac:"#ffffff";c2.lineWidth=1.5;
+    c2.beginPath();c2.moveTo(x0,y0);c2.lineTo(x,y);c2.stroke();
+  }
+}
+function aOrbitals(t,bg,ac){
+  var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
+  var baseR=Math.min(W,H)*.26;
+  for(var i=0;i<5;i++){
+    var spd=.6+i*.25,ph=(i/5)*Math.PI*2;
+    var angle=t*Math.PI*4*spd+ph;
+    var orb=baseR*(0.4+i*.14);
+    var x=cx+Math.cos(angle)*orb,y=cy+Math.sin(angle)*orb;
+    var sz=Math.max(8,28-i*4);
+    c2.fillStyle=i%2===0?ac:"#ffffff";
+    c2.beginPath();c2.ellipse(x,y,sz*(1+t*.25),sz*(1-t*.18),angle,0,Math.PI*2);c2.fill();
+  }
+}
+function aCascade(t,bg,ac){
+  var W=canvas.width,H=canvas.height;
+  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
+  var cols=14,cw=W/cols;
+  for(var col=0;col<cols;col++){
+    var delay=(col/cols)*.5;
+    var ct=Math.max(0,(t-delay)/(1-delay));
+    var h=ct*H*1.4;
+    var prev=c2.globalAlpha;
+    c2.fillStyle=col%3===0?ac:"#000000";
+    c2.globalAlpha=.12+ct*.55;
+    c2.fillRect(col*cw,0,cw-1,h);
+    c2.globalAlpha=prev;
+    for(var row=0;row<10;row++){
+      var ry=(row/10)*H;
+      if(ry<h){
+        c2.fillStyle=col%2===0?ac:"#ffffff";
+        c2.globalAlpha=Math.max(0,1-ry/H)*prev;
+        c2.beginPath();c2.arc(col*cw+cw/2,ry,3,0,Math.PI*2);c2.fill();
+        c2.globalAlpha=prev;
+      }
+    }
+  }
+}
+function aBloom(t,bg,ac){
+  var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
+  var petals=12,r=Math.min(W,H)*.36*t;
+  var prev=c2.globalAlpha;
+  for(var i=0;i<petals;i++){
+    var angle=(i/petals)*Math.PI*2+t*Math.PI*.5;
+    c2.save();c2.translate(cx,cy);c2.rotate(angle);
+    c2.fillStyle=i%2===0?ac:"#ffffff";c2.globalAlpha=prev*.75;
+    c2.beginPath();c2.ellipse(r/2,0,r*.52,r*.2,0,0,Math.PI*2);c2.fill();
+    c2.restore();
+  }
+  c2.fillStyle=ac;c2.globalAlpha=prev*.95;
+  c2.beginPath();c2.arc(cx,cy,r*.22,0,Math.PI*2);c2.fill();
+  c2.globalAlpha=prev;
+}
+
+/* ---------- TIMER END ---------- */
+function timerEndSeq(onDone){
+  var overlay=document.getElementById("overlay");
+  var msg=document.getElementById("overlay-msg");
+  msg.textContent=ANIM_LABELS[animIdx%6];
+  overlay.classList.add("show");
+  try{playSound(soundIdx);}catch(e){}
+  runAnim(animIdx,function(){
+    overlay.classList.remove("show");
+    soundIdx++;animIdx++;
+    if(onDone)onDone();
+  });
+}
+
+/* ---------- SPIN ---------- */
+function spin(finalPrompt,isGlitch){
+  nextColor();show("s-spin");
+  var el=document.getElementById("spin-text"),lbl=document.getElementById("spin-label");
+  el.classList.add("spinning");lbl.textContent="Scanning signals";
+  var all=PROMPTS.all,count=0,total=20,delay=70;
+  function step(){
+    var p=pick(all),words=p.split(" ");
+    el.textContent=words.slice(0,4).join(" ")+"...";
+    count++;
+    if(count<total){
+      delay=70+Math.pow(count/total,2)*360;
+      setTimeout(step,delay);
+    } else {
+      el.classList.remove("spinning");
+      el.textContent=finalPrompt;
+      lbl.textContent=isGlitch?"Signal interference":"Signal locked";
+      setTimeout(function(){revealPrompt(finalPrompt,isGlitch);},700);
+    }
+  }
+  step();
+}
+
+function revealPrompt(prompt,isGlitch){
+  currentPrompt=prompt;round=1;
+  var el=document.getElementById("prompt-text");
+  var ey=document.getElementById("prompt-eyebrow");
+  var rb=document.getElementById("round-badge");
+  var ins=document.getElementById("prompt-instr");
+  el.textContent=prompt;
+  ey.textContent=isGlitch?"Unexpected signal":"Your signal";
+  rb.textContent="Round 1 of 2";
+  ins.innerHTML="<strong>Speaker:</strong> talk non-stop for 7 minutes.<br><strong>Mirror:</strong> listen silently, observe everything.";
+  el.classList.remove("enter","glitch");
+  void el.offsetWidth;
+  el.classList.add("enter");
+  if(isGlitch)setTimeout(function(){el.classList.add("glitch");},350);
+  show("s-prompt");
+}
+
+/* ---------- TIMER (SPEAKER) ---------- */
+var mirrorSecs=180, mirrorInterval=null, mirrorPaused=false;
+var mirrorQuestions=[];
+
+function startTimer(){
+  stopTimer();timerSecs=420;paused=false;
+  var big=document.getElementById("timer-big");
+  big.classList.remove("done");
+  document.getElementById("timer-halfway").classList.remove("show");
+  document.getElementById("timer-label").textContent="Round "+round+" — Speak";
+  document.getElementById("timer-echo").textContent=currentPrompt;
+  setPauseUI("tc-pause-icon","tc-pause-label",false);
+  updateDisplay();show("s-timer");
+  timerInterval=setInterval(function(){
+    if(paused)return;
+    timerSecs--;updateDisplay();
+    if(timerSecs===210)document.getElementById("timer-halfway").classList.add("show");
+    if(timerSecs<=0){
+      stopTimer();
+      document.getElementById("timer-big").textContent="0:00";
+      document.getElementById("timer-big").classList.add("done");
+      document.getElementById("timer-label").textContent="Time’s up";
+      advanceToMirrorTimer();
+    }
+  },1000);
+}
+
+function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null;}paused=false;}
+
+function togglePause(){
+  if(timerSecs<=0)return;
+  paused=!paused;
+  setPauseUI("tc-pause-icon","tc-pause-label",paused);
+  document.getElementById("timer-label").textContent=paused?"Paused — tap to resume":"Round "+round+" — Speak";
+}
+
+function setPauseUI(iconId,labelId,isPaused){
+  document.getElementById(iconId).innerHTML=isPaused?"&#9654;":"&#9646;&#9646;";
+  document.getElementById(labelId).textContent=isPaused?"Resume":"Pause";
+}
+
+function updateDisplay(){
+  var m=Math.floor(timerSecs/60),s=timerSecs%60;
+  document.getElementById("timer-big").textContent=m+":"+("0"+s).slice(-2);
+}
+
+function advanceToMirrorTimer(){
+  stopTimer();
+  // Pick questions now so mirror timer can show them
+  mirrorQuestions=shuffle(MIRROR_POOL).slice(0,3);
+  // Safe timerEndSeq with fallback in case animation stalls
+  var done=false;
+  function proceed(){
+    if(done)return;done=true;
+    document.getElementById("overlay").classList.remove("show");
+    startMirrorTimer();
+  }
+  document.getElementById("overlay-msg").textContent=ANIM_LABELS[animIdx%6];
+  document.getElementById("overlay").classList.add("show");
+  try{playSound(soundIdx);}catch(e){}
+  runAnim(animIdx,proceed);
+  soundIdx++;animIdx++;
+  // Fallback: if animation hasn't resolved in 4s, force proceed
+  setTimeout(proceed,4000);
+}
+
+/* ---------- MIRROR TIMER (3 MIN) ---------- */
+function startMirrorTimer(){
+  stopMirrorTimer();mirrorSecs=180;mirrorPaused=false;
+  nextColor();
+  // Populate questions
+  var ul=document.getElementById("mt-qs");
+  ul.innerHTML="";
+  mirrorQuestions.forEach(function(q){
+    var li=document.createElement("li");li.textContent=q;ul.appendChild(li);
+  });
+  document.getElementById("mt-badge").textContent=round===1?"Round 1 — Mirror speaks":"Round 2 — Mirror speaks";
+  document.getElementById("mt-label").textContent="Share what you observed";
+  document.getElementById("mt-prompt-echo").textContent=currentPrompt;
+  document.getElementById("mt-big").classList.remove("done");
+  document.getElementById("mt-halfway").classList.remove("show");
+  setPauseUI("mtc-pause-icon","mtc-pause-label",false);
+  updateMirrorDisplay();show("s-mirror-timer");
+  mirrorInterval=setInterval(function(){
+    if(mirrorPaused)return;
+    mirrorSecs--;updateMirrorDisplay();
+    if(mirrorSecs===90)document.getElementById("mt-halfway").classList.add("show");
+    if(mirrorSecs<=0){
+      stopMirrorTimer();
+      document.getElementById("mt-big").textContent="0:00";
+      document.getElementById("mt-big").classList.add("done");
+      document.getElementById("mt-label").textContent="Time’s up";
+      setTimeout(advanceAfterMirror,600);
+    }
+  },1000);
+}
+
+function stopMirrorTimer(){if(mirrorInterval){clearInterval(mirrorInterval);mirrorInterval=null;}mirrorPaused=false;}
+
+function toggleMirrorPause(){
+  if(mirrorSecs<=0)return;
+  mirrorPaused=!mirrorPaused;
+  setPauseUI("mtc-pause-icon","mtc-pause-label",mirrorPaused);
+  document.getElementById("mt-label").textContent=mirrorPaused?"Paused — tap to resume":"Share what you observed";
+}
+
+function updateMirrorDisplay(){
+  var m=Math.floor(mirrorSecs/60),s=mirrorSecs%60;
+  document.getElementById("mt-big").textContent=m+":"+("0"+s).slice(-2);
+}
+
+function advanceAfterMirror(){
+  stopMirrorTimer();
+  nextColor();
+  if(round===1){
+    showSwitchScreen();
+  } else {
+    show("s-end");
+    document.getElementById("end-area").value="";
+  }
+}
+
+/* ---------- SWITCH SCREEN (uses existing s-mirror) ---------- */
+function showSwitchScreen(){
+  document.getElementById("mirror-badge").textContent="Round 1 done — switch roles";
+  var nextBtn=document.getElementById("btn-mirror-next");
+  nextBtn.textContent="Start Round 2";
+  nextBtn.onclick=startRound2;
+  // Clear mirror questions list (they were in the mirror timer)
+  document.getElementById("mirror-qs").innerHTML="";
+  show("s-mirror");
+}
+
+function startRound2(){
+  round=2;nextColor();
+  document.getElementById("round-badge").textContent="Round 2 of 2";
+  document.getElementById("prompt-instr").innerHTML="<strong>Switch!</strong> The mirror now speaks.<br>Same prompt. Your turn to go.";
+  show("s-prompt");
+}
+
+function showMirror(){
+  // Now only called after round 2 mirror timer — go to end
+  nextColor();show("s-end");document.getElementById("end-area").value="";
+}
+
+function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null;}paused=false;}
+
+/* ---------- BINDINGS ---------- */
+document.getElementById("btn-spin").addEventListener("click",function(){
+  var g=Math.random()<.1;
+  spin(g?pick(GLITCH_PROMPTS):pick(PROMPTS.all),g);
+});
+document.getElementById("btn-compass").addEventListener("click",function(){nextColor();show("s-compass");});
+document.querySelectorAll(".compass-btn").forEach(function(b){
+  b.addEventListener("click",function(){spin(pick(PROMPTS[b.getAttribute("data-dir")]),false);});
+});
+document.getElementById("btn-start-timer").addEventListener("click",startTimer);
+document.getElementById("btn-new").addEventListener("click",goHome);
+document.getElementById("btn-again").addEventListener("click",goHome);
+document.getElementById("btn-mirror-home").addEventListener("click",goHome);
+
+// Speaker timer controls
+document.getElementById("timer-big").addEventListener("click",togglePause);
+document.getElementById("tc-restart").addEventListener("click",function(){startTimer();});
+document.getElementById("tc-pause").addEventListener("click",togglePause);
+document.getElementById("tc-skip").addEventListener("click",function(){advanceToMirrorTimer();});
+
+// Mirror timer controls
+document.getElementById("mt-big").addEventListener("click",toggleMirrorPause);
+document.getElementById("mtc-restart").addEventListener("click",function(){startMirrorTimer();});
+document.getElementById("mtc-pause").addEventListener("click",toggleMirrorPause);
+document.getElementById("mtc-skip").addEventListener("click",function(){stopMirrorTimer();advanceAfterMirror();});
+
+document.addEventListener("keydown",function(e){
+  if(e.code==="Space"){
+    e.preventDefault();
+    if(activeScreen==="s-timer")togglePause();
+    else if(activeScreen==="s-mirror-timer")toggleMirrorPause();
+  }
+  if(e.code==="Escape")goHome();
+});
+document.addEventListener("touchmove",function(e){e.preventDefault();},{passive:false});
+
+
+setColor(COLORS[0]);
+})();
+</script>
+</body>
+</html>
