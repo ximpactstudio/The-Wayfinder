@@ -50,10 +50,7 @@ html,body{
   display:flex;justify-content:space-between;align-items:center;
   border-top:2px solid var(--blk);z-index:20;
 }
-.footer-logo{display:flex;align-items:center;gap:0;line-height:1;user-select:none}
-.logo-adc{font-size:clamp(14px,3.8vw,20px);font-weight:900;letter-spacing:-.03em;color:var(--blk)}
-.logo-sep{font-size:clamp(12px,3.2vw,17px);font-weight:300;color:var(--blk);opacity:.5;margin:0 clamp(5px,1.4vw,8px)}
-.logo-cf{font-size:clamp(11px,3vw,16px);font-weight:700;letter-spacing:.04em;color:var(--blk)}
+.footer-logo{display:block;height:clamp(13px,3.5vw,18px);width:auto}
 .footer-date{font-size:clamp(.62rem,2.2vw,.8rem);font-weight:400;color:var(--blk);opacity:.65}
 
 /* SCREENS */
@@ -162,6 +159,9 @@ html,body{
 .mtimer-qs li:last-child{border-bottom:none}
 .mtimer-qs li::before{content:counter(mitem) ".";font-weight:900;margin-right:.4rem}
 
+/* LANDING EXTRA SHAPES */
+.landing-shapes{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.landing-shapes svg{position:absolute;fill:var(--accent);transition:fill .5s cubic-bezier(.4,0,.2,1)}
 /* PREP SCREEN */
 .prep-prompt{font-size:clamp(1.6rem,6vw,3.8rem);font-weight:900;line-height:1.06;letter-spacing:-.03em;color:var(--blk);max-width:92vw;margin-bottom:1.4rem;position:relative;z-index:2}
 .prep-instr{font-size:clamp(.9rem,3.5vw,1.1rem);font-weight:400;color:var(--blk);opacity:.72;line-height:1.6;margin-bottom:1.8rem;position:relative;z-index:2;max-width:88vw}
@@ -188,11 +188,25 @@ html,body{
 <canvas id="shapes-canvas"></canvas>
 <div id="overlay"><canvas id="anim-canvas"></canvas><div id="overlay-msg"></div></div>
 <footer class="footer">
-  <span class="footer-logo"><span class="logo-adc">ADC</span><span class="logo-sep">&#8202;|&#8202;</span><span class="logo-cf">CLEVER&#176;FRANKE</span></span>
+  <svg class="footer-logo" width="168" height="16" viewBox="0 0 210 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M60.4403 0.404785H60.209V19.4765H60.4403V0.404785Z" fill="black"/>
+<path d="M139.84 2.46094C138.489 2.46094 137.395 3.55722 137.393 4.90792C137.393 6.25862 138.487 7.35491 139.84 7.35491C141.193 7.35491 142.284 6.25862 142.287 4.90792C142.287 3.55722 141.193 2.46094 139.84 2.46094ZM139.84 5.91632C139.282 5.91632 138.831 5.46301 138.829 4.90561C138.829 4.34822 139.282 3.89721 139.84 3.8949C140.397 3.8949 140.848 4.34822 140.85 4.90561C140.85 5.46301 140.397 5.91401 139.84 5.91632Z" fill="black"/>
+<path d="M75.3999 14.2102C73.5588 14.2102 72.4487 12.7832 72.4487 10.0054C72.4487 7.22772 73.686 5.70818 75.4161 5.70818C77.1461 5.70818 77.7798 6.89698 78.0018 7.64403L80.3493 7.01031C79.9539 5.67811 78.6217 3.72607 75.4322 3.72607C72.0069 3.72607 69.8652 6.37428 69.8652 10.054C69.8652 13.7337 71.6901 16.2085 75.4022 16.2085C78.8275 16.2085 80.1435 13.9881 80.4927 12.5126L78.0828 12.0199C77.9093 12.9242 77.1946 14.2102 75.4022 14.2102H75.3999ZM85.1207 3.94811H82.6784V15.924H90.5235V13.8147L85.1138 13.8216L85.1184 3.95042L85.1207 3.94811ZM100.86 13.891L95.0197 13.9072L95.0151 10.8265L99.7957 10.8311V8.91146H95.0197V5.95565L100.716 5.96028V3.94579H92.5912V15.9217H100.857V13.891H100.86ZM109.905 15.9217L114.066 3.94579H111.781L108.432 13.5441L104.967 3.94579H102.638L106.799 15.9217H109.907H109.905ZM124.141 13.891H118.342V10.8265L123.079 10.8311V8.91146H118.342V5.95565L124.002 5.96028V3.94579H115.919V15.9217H124.145V13.891H124.141ZM130.984 11.5273C131.047 11.5273 131.433 11.5111 131.528 11.4949L133.67 15.9194H136.445L133.686 10.9074C134.956 10.3847 135.892 9.14737 135.892 7.76661C135.892 6.03892 135.147 4.83161 133.577 4.27653C132.735 3.94348 131.768 3.84865 130.547 3.84865C128.755 3.84865 126.528 3.9111 126.528 3.9111V15.9171H128.954V11.525H130.987L130.984 11.5273ZM128.949 5.83307C128.949 5.83307 130.052 5.78682 130.654 5.78682C131.653 5.78682 132.335 5.91402 132.795 6.29564C133.191 6.64488 133.415 7.12133 133.415 7.75504C133.415 8.61079 133.003 9.11962 132.511 9.37403C131.923 9.6747 131.047 9.6747 129.902 9.6747H128.949V5.83539V5.83307Z" fill="black"/>
+<path d="M144.094 15.8802H146.522L146.518 10.8266L150.896 10.8289V8.84682L146.522 8.85608L146.52 5.99047L151.562 5.99278V3.89966H144.094V15.8802Z" fill="black"/>
+<path d="M160.602 10.8613C161.872 10.3386 162.808 9.10121 162.808 7.72044C162.808 5.99275 162.064 4.78545 160.493 4.23037C159.651 3.89732 158.685 3.80249 157.463 3.80249C155.671 3.80249 153.705 3.86494 153.705 3.86494V15.8778H156.115V11.4788H158.042C158.104 11.4788 158.352 11.4626 158.446 11.4464L160.588 15.8778H163.364L160.604 10.859L160.602 10.8613ZM159.429 9.32324C158.842 9.62391 158.028 9.62391 156.885 9.62391H156.099V5.78459C156.099 5.78459 156.971 5.73834 157.574 5.73834C158.574 5.73834 159.256 5.86554 159.716 6.24716C160.112 6.5964 160.336 7.07285 160.336 7.70657C160.336 8.56232 159.924 9.07114 159.432 9.32555L159.429 9.32324Z" fill="black"/>
+<path d="M185.209 12.67L180.572 3.89966H177.195V15.8802H179.594L179.51 6.81615L184.305 15.8802H187.585V3.89966H185.112L185.209 12.67Z" fill="black"/>
+<path d="M204.412 10.778L208.938 10.7827V8.86301H204.414L204.412 5.90952L209.857 5.91414V3.89966H202.014V15.8802H210V13.8449H204.414L204.412 10.778Z" fill="black"/>
+<path d="M199.783 3.89966H196.769L192.671 8.61554V3.89966H190.291V15.8802H192.671V11.7518L193.98 10.2276L197.419 15.8802H200.498L195.613 8.61092L199.783 3.89966Z" fill="black"/>
+<path d="M171.589 3.83716H168.483L164.598 15.8801H167.065L167.958 12.7647H171.978L172.857 15.857L175.491 15.8824L171.587 3.83947L171.589 3.83716ZM168.511 10.8566L169.98 5.74294L171.439 10.8566H168.513H168.511Z" fill="black"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M50.6591 13.0907L46.6509 11.9134C46.5307 11.8718 46.422 11.9273 46.3827 12.0892C45.8461 13.9557 44.5995 15.7967 41.9721 15.7967C39.0232 15.7967 37.2654 13.6874 37.2654 9.92671C37.2654 6.16603 39.0093 4.08448 41.9443 4.08448C44.2363 4.08448 45.6587 5.62714 46.0195 6.7905C46.0589 6.91308 46.1537 6.96628 46.274 6.92465L50.215 5.65258C50.3353 5.61095 50.3885 5.51844 50.3492 5.40974C49.3963 2.40767 46.4613 0 41.8356 0C38.8775 0 36.4166 1.06159 34.7283 2.90493C34.2564 3.42069 33.4446 3.41607 32.9589 2.91187C31.3978 1.29057 29.108 0.404747 26.18 0.404747H18.0966C18.011 0.404747 17.9324 0.464881 17.907 0.54583V0.550456C17.907 0.550456 17.9046 0.555082 17.9023 0.557395C17.8977 0.573585 17.8954 0.589774 17.8954 0.605964V9.68155C17.8954 10.646 16.5447 10.868 16.2348 9.95447L13.0708 0.566646C13.0315 0.444066 12.9505 0.404747 12.8418 0.404747H6.54166C6.43527 0.404747 6.35432 0.446378 6.31269 0.566646L0.0125106 19.2452C-0.0268077 19.3793 0.0263876 19.4741 0.174409 19.4741H4.82553C4.93192 19.4741 5.01287 19.4325 5.0545 19.3122L5.7923 16.7959C5.97964 16.1459 6.40983 15.8615 7.06667 15.8615H12.3214C12.9783 15.8615 13.4085 16.1459 13.5958 16.7959L14.3475 19.3122C14.3868 19.4348 14.4678 19.4741 14.5765 19.4741H26.2956C27.6001 19.4741 28.7796 19.2729 29.8273 18.8959C31.0439 18.4727 32.0731 17.8251 32.8988 16.967C33.3845 16.4628 34.1963 16.4582 34.6681 16.9739C36.3565 18.8173 38.8174 19.8789 41.7755 19.8789C41.7986 19.8789 41.8217 19.8789 41.8449 19.8789C46.873 19.8789 49.808 16.849 50.8141 13.3197C50.8418 13.2109 50.7863 13.13 50.666 13.0907H50.6591ZM10.832 12.3205H8.5654C7.89467 12.3205 7.43904 11.8209 7.6125 11.1571L8.91232 6.65173C9.09966 5.86768 10.2653 5.86768 10.4666 6.65173L11.7664 11.1571C11.9398 11.8209 11.4981 12.3205 10.8274 12.3205H10.832ZM24.0105 15.3503C23.3144 15.3503 22.7917 14.823 22.7917 14.1199V5.7451C22.7917 5.58089 22.8194 5.42593 22.8726 5.28484C23.0461 4.82921 23.4763 4.52623 24.0105 4.52623H25.9001C28.6894 4.52623 30.1905 6.44589 30.1905 9.91052C30.1905 10.683 30.1164 11.3792 29.9707 11.9967C29.9661 12.0175 29.9615 12.0383 29.9569 12.0592C29.9407 12.1262 29.9222 12.1933 29.9037 12.2581C29.344 14.2564 27.9817 15.3457 25.9001 15.3457H24.0105V15.3503Z" fill="black"/>
+</svg>
   <span class="footer-date">8.4.26</span>
 </footer>
 
 <div class="screen active" id="s-landing">
+  <div class="landing-shapes" id="landing-shapes" aria-hidden="true">
+    <!-- JS-populated animated shapes specific to landing -->
+  </div>
   <div class="landing-title">WAY<br>FINDER</div>
   <p class="landing-sub">One prompt. Two voices. Walk and talk.</p>
   <div class="btn-row">
@@ -211,7 +225,7 @@ html,body{
   <div class="prep-prompt" id="prep-prompt-text"></div>
   <p class="prep-instr">Take 1 minute to sit with this question.<br>Then start walking.</p>
   <div class="timer-label" id="prep-label">Prep time</div>
-  <div class="timer-big" id="prep-big">1:00</div>
+  <div class="timer-big" id="prep-big">0:30</div>
   <div class="timer-controls" style="margin-top:1.2rem">
     <button class="tc-btn ghost" id="prep-restart"><span class="tc-icon">&#8635;</span>Restart</button>
     <button class="tc-btn" id="prep-pause"><span class="tc-icon" id="prep-pause-icon">&#9646;&#9646;</span><span id="prep-pause-label">Pause</span></button>
@@ -327,7 +341,6 @@ var PROMPTS = {
     "What's something you've been overthinking instead of just trying? Why?",
     "What slows your learning down more than it should? Why?",
     "What question have you been avoiding asking? Why?",
-    "If you trusted yourself more, what direction would you move in? Why?",
     "What signals are you noticing about what might be next for you? Why?",
     "What are you holding onto that might not be needed anymore? Why?",
     "If the next step didn't have to be perfect, what would it be? Why?",
@@ -352,7 +365,6 @@ var PROMPTS = {
     "What would feel like relief to finally say out loud? Why?"
   ],
   forward:[
-    "If you trusted yourself more, what direction would you move in? Why?",
     "Your future self is giving you advice\u2014what do they say? Why?"
   ]
 };
@@ -691,7 +703,7 @@ function startPrep(prompt) {
   document.getElementById("prep-prompt-text").textContent = prompt;
   show("s-prep");
   startTimerPhase(
-    {secs:60, bigId:"prep-big", labelId:"prep-label", halfwayId:null, halfwaySecs:null,
+    {secs:30, bigId:"prep-big", labelId:"prep-label", halfwayId:null, halfwaySecs:null,
      timerLabel:"Prep time", pauseIconId:"prep-pause-icon", pauseLabelId:"prep-pause-label",
      onDone: startR1A},
     "prep-restart","prep-pause","prep-skip"
@@ -942,6 +954,80 @@ function tickShapes() {
 }
 
 tickShapes();
+
+
+/* ===== LANDING EXTRA SHAPES ===== */
+// These are placed shapes on the landing screen only — more visible, larger, fewer
+var LANDING_SHAPE_DEFS = [
+  // {type, x%, y%, size, rot, animClass}
+  {t:"blob3",  x:78,  y:8,   s:52,  r:0.3,  vr:0.004, vx:0.12,  vy:0.08},
+  {t:"sparkle",x:88,  y:55,  s:28,  r:0.8,  vr:0.008, vx:-0.09, vy:0.12},
+  {t:"plus",   x:6,   y:18,  s:22,  r:0.1,  vr:0.005, vx:0.07,  vy:0.1},
+  {t:"cross",  x:92,  y:82,  s:18,  r:0.4,  vr:-0.007,vx:-0.1,  vy:-0.07},
+  {t:"blob2",  x:15,  y:78,  s:38,  r:1.2,  vr:0.003, vx:0.08,  vy:-0.09},
+  {t:"dash",   x:60,  y:92,  s:24,  r:0.0,  vr:0.002, vx:0.13,  vy:0.05},
+  {t:"dot",    x:50,  y:12,  s:14,  r:0.0,  vr:0.0,   vx:-0.06, vy:0.11},
+  {t:"diamond",x:30,  y:90,  s:20,  r:0.78, vr:0.006, vx:0.1,   vy:-0.06},
+  {t:"tri",    x:72,  y:70,  s:26,  r:0.2,  vr:-0.004,vx:-0.08, vy:0.08},
+];
+
+var landingShapes = LANDING_SHAPE_DEFS.map(function(d, i) {
+  return {
+    t: d.t,
+    x: (d.x / 100) * window.innerWidth,
+    y: (d.y / 100) * window.innerHeight,
+    s: d.s,
+    r: d.r,
+    vr: d.vr,
+    vx: d.vx,
+    vy: d.vy,
+    phase: (i / LANDING_SHAPE_DEFS.length) * Math.PI * 2,
+    pulseSpeed: 0.008 + i * 0.002
+  };
+});
+
+// Dedicated landing canvas
+var lc = document.createElement("canvas");
+lc.style.cssText = "position:absolute;inset:0;width:100%;height:100%;pointer-events:none;";
+document.getElementById("landing-shapes").appendChild(lc);
+var lc2 = lc.getContext("2d");
+
+function resizeLanding() {
+  lc.width = window.innerWidth;
+  lc.height = window.innerHeight;
+}
+window.addEventListener("resize", resizeLanding);
+resizeLanding();
+
+function tickLanding() {
+  var W = lc.width, H = lc.height;
+  lc2.clearRect(0, 0, W, H);
+  var now = performance.now() * 0.001;
+  var ac = COLORS[colorIdx].ac;
+  var pad = 100;
+
+  for (var i = 0; i < landingShapes.length; i++) {
+    var sh = landingShapes[i];
+    sh.x += sh.vx;
+    sh.y += sh.vy;
+    sh.r += sh.vr;
+    if (sh.x < -pad) sh.x = W + pad;
+    if (sh.x > W + pad) sh.x = -pad;
+    if (sh.y < -pad) sh.y = H + pad;
+    if (sh.y > H + pad) sh.y = -pad;
+    var pulse = 1 + Math.sin(now * sh.pulseSpeed * 5 + sh.phase) * 0.12;
+    var alpha = 0.18 + Math.sin(now * sh.pulseSpeed * 3 + sh.phase) * 0.06;
+
+    lc2.save();
+    lc2.translate(sh.x, sh.y);
+    // Use drawShape from the shapes layer — same function, larger and more opaque
+    drawShape(lc2, sh.t, (sh.s / 20) * pulse, sh.r, alpha, ac);
+    lc2.restore();
+  }
+  requestAnimationFrame(tickLanding);
+}
+
+tickLanding();
 
 setColor(COLORS[0]);
 
