@@ -9,6 +9,7 @@
 <title>WAYFINDER</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,700;9..40,900&display=swap" rel="stylesheet">
 <style>
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
   --bg:#2BEBCB;--accent:#FF9BFC;--blk:#000;
@@ -36,6 +37,7 @@ html,body{
 @keyframes mc{0%,100%{border-radius:50%;transform:translate(0,0)}50%{border-radius:40% 60%/60% 40%;transform:translate(16px,-12px)}}
 
 /* OVERLAY */
+#shapes-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:1}
 #overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s ease}
 #overlay.show{opacity:1;pointer-events:all}
 #anim-canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -159,13 +161,32 @@ html,body{
 .mtimer-qs li{font-size:clamp(.78rem,3vw,.9rem);color:var(--blk);line-height:1.4;padding:.4rem 0;border-bottom:1px solid rgba(0,0,0,.12);counter-increment:mitem}
 .mtimer-qs li:last-child{border-bottom:none}
 .mtimer-qs li::before{content:counter(mitem) ".";font-weight:900;margin-right:.4rem}
+
+/* PREP SCREEN */
+.prep-prompt{font-size:clamp(1.6rem,6vw,3.8rem);font-weight:900;line-height:1.06;letter-spacing:-.03em;color:var(--blk);max-width:92vw;margin-bottom:1.4rem;position:relative;z-index:2}
+.prep-instr{font-size:clamp(.9rem,3.5vw,1.1rem);font-weight:400;color:var(--blk);opacity:.72;line-height:1.6;margin-bottom:1.8rem;position:relative;z-index:2;max-width:88vw}
+/* PHASE SCREENS */
+.phase-role{font-size:clamp(2.2rem,9vw,5.5rem);font-weight:900;line-height:.92;letter-spacing:-.04em;color:var(--blk);margin-bottom:.6rem;position:relative;z-index:2}
+.phase-instr{font-size:clamp(.85rem,3.2vw,1rem);font-weight:400;color:var(--blk);line-height:1.55;position:relative;z-index:2;max-width:88vw;margin-bottom:.5rem}
+.phase-instr strong{font-weight:900}
+.phase-support{font-size:clamp(.75rem,2.8vw,.88rem);color:var(--blk);opacity:.55;font-style:italic;margin-bottom:.8rem;position:relative;z-index:2;max-width:88vw}
+.phase-mirror-list{list-style:none;margin-bottom:.8rem;position:relative;z-index:2;max-width:min(540px,92vw)}
+.phase-mirror-list li{font-size:clamp(.8rem,3vw,.95rem);color:var(--blk);line-height:1.45;padding:.4rem 0 .4rem 1.2rem;border-bottom:1px solid rgba(0,0,0,.1);position:relative}
+.phase-mirror-list li:last-child{border-bottom:none}
+.phase-mirror-list li::before{content:"\2022";font-weight:900;position:absolute;left:0;top:.4rem}
+/* TURNAROUND */
+.turn-title{font-size:clamp(2.8rem,11vw,7rem);font-weight:900;line-height:.9;letter-spacing:-.04em;color:var(--blk);margin-bottom:1.2rem;position:relative;z-index:2;user-select:none}
+.turn-sub{font-size:clamp(.88rem,3.5vw,1.1rem);font-weight:400;color:var(--blk);opacity:.68;line-height:1.6;margin-bottom:2rem;position:relative;z-index:2;max-width:88vw}
+/* END */
+.end-big{font-size:clamp(3.5rem,14vw,9rem);font-weight:900;line-height:.9;letter-spacing:-.04em;color:var(--blk);margin-bottom:.8rem;position:relative;z-index:2;user-select:none}
+.end-sub{font-size:clamp(.88rem,3.5vw,1.1rem);color:var(--blk);opacity:.65;margin-bottom:2.5rem;position:relative;z-index:2;line-height:1.55;max-width:88vw}
+
 </style>
 </head>
 <body>
 <div class="blobs"><div class="blob blob-a"></div><div class="blob blob-b"></div><div class="blob blob-c"></div></div>
-
+<canvas id="shapes-canvas"></canvas>
 <div id="overlay"><canvas id="anim-canvas"></canvas><div id="overlay-msg"></div></div>
-
 <footer class="footer">
   <span class="footer-logo"><span class="logo-adc">ADC</span><span class="logo-sep">&#8202;|&#8202;</span><span class="logo-cf">CLEVER&#176;FRANKE</span></span>
   <span class="footer-date">8.4.26</span>
@@ -173,7 +194,7 @@ html,body{
 
 <div class="screen active" id="s-landing">
   <div class="landing-title">WAY<br>FINDER</div>
-  <p class="landing-sub">One prompt. Two speakers. Seven minutes each.</p>
+  <p class="landing-sub">One prompt. Two voices. Walk and talk.</p>
   <div class="btn-row">
     <button class="btn-main" id="btn-spin">Find your signal</button>
     <button class="btn-ghost" id="btn-compass">Compass mode</button>
@@ -185,50 +206,103 @@ html,body{
   <div class="spin-text" id="spin-text">&#8212;</div>
 </div>
 
-<div class="screen" id="s-prompt">
-  <div class="badge" id="round-badge">Round 1 of 2</div>
-  <div class="eyebrow" id="prompt-eyebrow">Your signal</div>
-  <div class="prompt-text" id="prompt-text"></div>
-  <p class="prompt-instr" id="prompt-instr"><strong>Speaker:</strong> talk non-stop for 7 minutes.<br><strong>Mirror:</strong> listen silently, observe everything.</p>
-  <div class="btn-row">
-    <button class="btn-main" id="btn-start-timer">Start 7:00</button>
-    <button class="btn-ghost" id="btn-new">New signal</button>
+<div class="screen" id="s-prep">
+  <div class="badge">Read your prompt</div>
+  <div class="prep-prompt" id="prep-prompt-text"></div>
+  <p class="prep-instr">Take 1 minute to sit with this question.<br>Then start walking.</p>
+  <div class="timer-label" id="prep-label">Prep time</div>
+  <div class="timer-big" id="prep-big">1:00</div>
+  <div class="timer-controls" style="margin-top:1.2rem">
+    <button class="tc-btn ghost" id="prep-restart"><span class="tc-icon">&#8635;</span>Restart</button>
+    <button class="tc-btn" id="prep-pause"><span class="tc-icon" id="prep-pause-icon">&#9646;&#9646;</span><span id="prep-pause-label">Pause</span></button>
+    <button class="tc-btn" id="prep-skip"><span class="tc-icon">&#9654;&#9654;</span>Skip</button>
   </div>
 </div>
 
-<div class="screen" id="s-timer">
-  <div class="timer-label" id="timer-label">Round 1 &mdash; Speak</div>
-  <div class="timer-big" id="timer-big">7:00</div>
-  <div class="timer-halfway" id="timer-halfway">&#8595; Halfway &mdash; keep going</div>
-  <div class="timer-echo" id="timer-echo"></div>
+<div class="screen" id="s-r1a">
+  <div class="badge">Round 1 &mdash; Person A speaks</div>
+  <div class="phase-role">Start<br>talking.</div>
+  <p class="phase-instr"><strong>Person A:</strong> Speak continuously. Do not pause.<br>Keep going even if you feel stuck.</p>
+  <p class="phase-support">The goal is to bypass overthinking.</p>
+  <p class="phase-instr" style="opacity:.4;font-size:clamp(.72rem,2.6vw,.82rem)" id="r1a-echo"></p>
+  <div class="timer-label" id="r1a-label">7 minutes</div>
+  <div class="timer-big" id="r1a-big">7:00</div>
+  <div class="timer-halfway" id="r1a-halfway">&#8595; Halfway &mdash; keep going</div>
   <div class="timer-controls">
-    <button class="tc-btn ghost" id="tc-restart"><span class="tc-icon">&#8635;</span>Restart</button>
-    <button class="tc-btn" id="tc-pause"><span class="tc-icon" id="tc-pause-icon">&#9646;&#9646;</span><span id="tc-pause-label">Pause</span></button>
-    <button class="tc-btn" id="tc-skip"><span class="tc-icon">&#9654;&#9654;</span>Mirror</button>
-  </div>
-</div>
-<div class="screen" id="s-mirror-timer">
-  <div class="badge" id="mt-badge">Mirror speaks &mdash; 3 min</div>
-  <div class="timer-label" id="mt-label">Share what you observed</div>
-  <div class="timer-big" id="mt-big">3:00</div>
-  <div class="timer-halfway" id="mt-halfway">&#8595; Halfway &mdash; try a question</div>
-  <p class="mtimer-prompt" id="mt-prompt-echo"></p>
-  <ul class="mtimer-qs" id="mt-qs"></ul>
-  <div class="timer-controls">
-    <button class="tc-btn ghost" id="mtc-restart"><span class="tc-icon">&#8635;</span>Restart</button>
-    <button class="tc-btn" id="mtc-pause"><span class="tc-icon" id="mtc-pause-icon">&#9646;&#9646;</span><span id="mtc-pause-label">Pause</span></button>
-    <button class="tc-btn" id="mtc-skip"><span class="tc-icon">&#9654;&#9654;</span>Next</button>
+    <button class="tc-btn ghost" id="r1a-restart"><span class="tc-icon">&#8635;</span>Restart</button>
+    <button class="tc-btn" id="r1a-pause"><span class="tc-icon" id="r1a-pause-icon">&#9646;&#9646;</span><span id="r1a-pause-label">Pause</span></button>
+    <button class="tc-btn" id="r1a-skip"><span class="tc-icon">&#9654;&#9654;</span>Next</button>
   </div>
 </div>
 
-<div class="screen" id="s-mirror">
-  <div class="badge" id="mirror-badge">Round 1 complete</div>
-  <div class="mirror-title">Mirror,<br>share back.</div>
-  <div class="mirror-sub">3 questions to guide you</div>
-  <ul class="mirror-qs" id="mirror-qs"></ul>
+<div class="screen" id="s-r1b">
+  <div class="badge">Round 1 &mdash; Person B reflects</div>
+  <div class="phase-role">Reflect<br>back.</div>
+  <p class="phase-instr"><strong>Person B:</strong> Share what you heard and observed.</p>
+  <ul class="phase-mirror-list">
+    <li>What you heard</li>
+    <li>What you observed</li>
+    <li>Then optionally ask: <em>Why do you think that happened?</em></li>
+  </ul>
+  <div class="timer-label" id="r1b-label">3 minutes</div>
+  <div class="timer-big" id="r1b-big">3:00</div>
+  <div class="timer-halfway" id="r1b-halfway">&#8595; Halfway &mdash; try a question</div>
+  <div class="timer-controls">
+    <button class="tc-btn ghost" id="r1b-restart"><span class="tc-icon">&#8635;</span>Restart</button>
+    <button class="tc-btn" id="r1b-pause"><span class="tc-icon" id="r1b-pause-icon">&#9646;&#9646;</span><span id="r1b-pause-label">Pause</span></button>
+    <button class="tc-btn" id="r1b-skip"><span class="tc-icon">&#9654;&#9654;</span>Next</button>
+  </div>
+</div>
+
+<div class="screen" id="s-turn">
+  <div class="turn-title">YOU'RE<br>HALF<br>WAY.</div>
+  <p class="turn-sub">Time to turn around.<br>If you've been walking away,<br>head back now before continuing.</p>
   <div class="btn-row">
-    <button class="btn-main" id="btn-mirror-next">Start Round 2</button>
-    <button class="btn-ghost" id="btn-mirror-home">Home</button>
+    <button class="btn-main" id="btn-start-r2">Start Round 2</button>
+  </div>
+</div>
+
+<div class="screen" id="s-r2a">
+  <div class="badge">Round 2 &mdash; Person B speaks</div>
+  <div class="phase-role">Switch<br>roles.</div>
+  <p class="phase-instr"><strong>Person B:</strong> Same prompt. Start talking.<br>Keep going. Don't stop.</p>
+  <p class="phase-support">Person A: stay silent. Just observe.</p>
+  <p class="phase-instr" style="opacity:.4;font-size:clamp(.72rem,2.6vw,.82rem)" id="r2a-echo"></p>
+  <div class="timer-label" id="r2a-label">7 minutes</div>
+  <div class="timer-big" id="r2a-big">7:00</div>
+  <div class="timer-halfway" id="r2a-halfway">&#8595; Halfway &mdash; keep going</div>
+  <div class="timer-controls">
+    <button class="tc-btn ghost" id="r2a-restart"><span class="tc-icon">&#8635;</span>Restart</button>
+    <button class="tc-btn" id="r2a-pause"><span class="tc-icon" id="r2a-pause-icon">&#9646;&#9646;</span><span id="r2a-pause-label">Pause</span></button>
+    <button class="tc-btn" id="r2a-skip"><span class="tc-icon">&#9654;&#9654;</span>Next</button>
+  </div>
+</div>
+
+<div class="screen" id="s-r2b">
+  <div class="badge">Round 2 &mdash; Person A reflects</div>
+  <div class="phase-role">Reflect<br>back.</div>
+  <p class="phase-instr"><strong>Person A:</strong> Share what you heard and observed.</p>
+  <ul class="phase-mirror-list">
+    <li>What you heard</li>
+    <li>What you observed</li>
+    <li>Then optionally ask: <em>Why do you think that happened?</em></li>
+  </ul>
+  <div class="timer-label" id="r2b-label">3 minutes</div>
+  <div class="timer-big" id="r2b-big">3:00</div>
+  <div class="timer-halfway" id="r2b-halfway">&#8595; Halfway &mdash; try a question</div>
+  <div class="timer-controls">
+    <button class="tc-btn ghost" id="r2b-restart"><span class="tc-icon">&#8635;</span>Restart</button>
+    <button class="tc-btn" id="r2b-pause"><span class="tc-icon" id="r2b-pause-icon">&#9646;&#9646;</span><span id="r2b-pause-label">Pause</span></button>
+    <button class="tc-btn" id="r2b-skip"><span class="tc-icon">&#9654;&#9654;</span>Finish</button>
+  </div>
+</div>
+
+<div class="screen" id="s-end">
+  <div class="end-big">You<br>made<br>it.</div>
+  <p class="end-sub">Both signals heard.<br>Both voices reflected.</p>
+  <div class="btn-row">
+    <button class="btn-main" id="btn-try-again">Try another signal</button>
+    <button class="btn-ghost" id="btn-home">Back to start</button>
   </div>
 </div>
 
@@ -242,574 +316,637 @@ html,body{
   </div>
 </div>
 
-<div class="screen" id="s-end">
-  <div class="end-title">What are you taking with you?</div>
-  <textarea class="end-area" id="end-area" placeholder="Write it here" rows="3"></textarea>
-  <div class="btn-row">
-    <button class="btn-main" id="btn-again">Start again</button>
-  </div>
-</div>
-
 <script>
+
 (function(){
 "use strict";
 
+/* ===== DATA ===== */
 var PROMPTS = {
   all:[
-    "What's something you've been overthinking instead of just trying?",
-    "What slows your learning down more than it should?",
-    "What question have you been avoiding asking?",
-    "Right now, what feels unclear but important?",
-    "If you trusted yourself more, what direction would you move in?",
-    "What signals are you noticing about what might be next for you?",
-    "What are you holding onto that might not be needed anymore?",
-    "If the next step didn't have to be perfect, what would it be?",
-    "Your future self is giving you advice. What do they say?",
-    "What would you do if you knew no one was judging you?",
-    "What's the smallest move that could change everything?",
-    "Where are you playing it safe when you don't need to?",
-    "What do you already know that you haven't acted on yet?",
-    "What would feel like relief to finally say out loud?"
+    "What's something you've been overthinking instead of just trying? Why?",
+    "What slows your learning down more than it should? Why?",
+    "What question have you been avoiding asking? Why?",
+    "If you trusted yourself more, what direction would you move in? Why?",
+    "What signals are you noticing about what might be next for you? Why?",
+    "What are you holding onto that might not be needed anymore? Why?",
+    "If the next step didn't have to be perfect, what would it be? Why?",
+    "Your future self is giving you advice\u2014what do they say? Why?",
+    "What would you do if you knew no one was judging you? Why?",
+    "Where are you playing it safe when you don't need to? Why?",
+    "What would feel like relief to finally say out loud? Why?"
   ],
   reflect:[
-    "What slows your learning down more than it should?",
-    "Right now, what feels unclear but important?",
-    "What signals are you noticing about what might be next for you?",
-    "Your future self is giving you advice. What do they say?",
-    "What do you already know that you haven't acted on yet?"
+    "What's something you've been overthinking instead of just trying? Why?",
+    "What slows your learning down more than it should? Why?",
+    "What question have you been avoiding asking? Why?",
+    "What signals are you noticing about what might be next for you? Why?"
   ],
   act:[
-    "What's something you've been overthinking instead of just trying?",
-    "If you trusted yourself more, what direction would you move in?",
-    "If the next step didn't have to be perfect, what would it be?",
-    "What's the smallest move that could change everything?",
-    "What would you do if you knew no one was judging you?"
+    "If the next step didn't have to be perfect, what would it be? Why?",
+    "What would you do if you knew no one was judging you? Why?"
   ],
   letgo:[
-    "What question have you been avoiding asking?",
-    "What are you holding onto that might not be needed anymore?",
-    "Where are you playing it safe when you don't need to?",
-    "What would feel like relief to finally say out loud?"
+    "What are you holding onto that might not be needed anymore? Why?",
+    "Where are you playing it safe when you don't need to? Why?",
+    "What would feel like relief to finally say out loud? Why?"
   ],
   forward:[
-    "If the next step didn't have to be perfect, what would it be?",
-    "What signals are you noticing about what might be next for you?",
-    "If you trusted yourself more, what direction would you move in?",
-    "What's the smallest move that could change everything?",
-    "Your future self is giving you advice. What do they say?"
+    "If you trusted yourself more, what direction would you move in? Why?",
+    "Your future self is giving you advice\u2014what do they say? Why?"
   ]
 };
 
-var GLITCH_PROMPTS = [
-  "What would happen if you actually trusted the pull?",
-  "What's the thing only you can see from where you stand?",
-  "Where does the map end and the territory begin?",
-  "What are you pretending not to know?",
-  "What would the version of you who figures it out do first?"
-];
-
-var MIRROR_POOL = [
-  "What moment seemed most alive when they were speaking?",
-  "What were they circling around without quite landing on?",
-  "What surprised you about what came out?",
-  "Where did their energy shift, up or down?",
-  "Was there something they kept returning to?",
-  "What felt like the real thing underneath everything they said?",
-  "What do you think they most needed to hear from themselves?",
-  "What did you notice that they might not have noticed in themselves?",
-  "When did they sound most certain, and does that feel right to you?",
-  "What question do you think they were really asking?",
-  "What would you reflect back as the single most important thing?",
-  "Where did they come alive, and where did they go quiet?"
-];
-
-var ANIM_LABELS = ["Time!", "Done!", "Signal!", "Now!", "Complete!", "Go!"];
-
 var COLORS = [
-  {bg:"#2BEBCB",ac:"#FF9BFC"},
-  {bg:"#FF9BFC",ac:"#2BEBCB"},
-  {bg:"#A187FF",ac:"#2BEBCB"},
-  {bg:"#58EB81",ac:"#FF9BFC"},
-  {bg:"#FFF347",ac:"#A187FF"},
-  {bg:"#E5C574",ac:"#FF9BFC"}
+  {bg:"#2BEBCB", ac:"#FF9BFC"},
+  {bg:"#FF9BFC", ac:"#2BEBCB"},
+  {bg:"#A187FF", ac:"#2BEBCB"},
+  {bg:"#58EB81", ac:"#FF9BFC"},
+  {bg:"#FFF347", ac:"#A187FF"},
+  {bg:"#E5C574", ac:"#FF9BFC"}
 ];
+var ANIM_LABELS = ["Time!","Done!","Signal!","Now!","Complete!","Go!"];
 
-var colorIdx=0, currentPrompt="", timerSecs=420;
-var timerInterval=null, paused=false, activeScreen="s-landing";
-var round=1, soundIdx=0, animIdx=0, audioCtx=null;
+/* ===== STATE ===== */
+var colorIdx = 0;
+var currentPrompt = "";
+var activeScreen = "s-landing";
+var soundIdx = 0;
+var animIdx = 0;
+var audioCtx = null;
+var activeTimerInterval = null;
+var animRAF = null;
 
-var root=document.documentElement;
+/* ===== UTILITIES ===== */
+var root = document.documentElement;
 
-function setColor(c){
-  root.style.setProperty("--bg",c.bg);
-  root.style.setProperty("--ac",c.ac);
-  document.body.style.backgroundColor=c.bg;
-  var blobs=document.querySelectorAll(".blob");
-  blobs.forEach(function(b){b.style.background=c.ac;});
+function setColor(c) {
+  root.style.setProperty("--bg", c.bg);
+  root.style.setProperty("--ac", c.ac);
+  document.body.style.backgroundColor = c.bg;
+  document.querySelectorAll(".blob").forEach(function(b){ b.style.background = c.ac; });
 }
-function nextColor(){colorIdx=(colorIdx+1)%COLORS.length;setColor(COLORS[colorIdx]);}
-function show(id){
-  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
+function nextColor() { colorIdx = (colorIdx+1) % COLORS.length; setColor(COLORS[colorIdx]); }
+function show(id) {
+  document.querySelectorAll(".screen").forEach(function(s){ s.classList.remove("active"); });
   document.getElementById(id).classList.add("active");
-  activeScreen=id;
+  activeScreen = id;
 }
-function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
-function shuffle(arr){
-  var a=arr.slice();
-  for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}
-  return a;
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function goHome() { clearTimer(); nextColor(); show("s-landing"); }
+function clearTimer() {
+  if (activeTimerInterval) { clearInterval(activeTimerInterval); activeTimerInterval = null; }
 }
-function goHome(){stopTimer();nextColor();show("s-landing");}
 
-/* ---------- AUDIO ---------- */
-function getCtx(){
-  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+/* ===== AUDIO ===== */
+function getCtx() {
+  if (!audioCtx) audioCtx = new(window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
 }
-function playSound(n){
-  var ctx=getCtx();
-  var idx=n%6;
-  if(idx===0) sCosmicBell(ctx);
-  else if(idx===1) sRisingPulse(ctx);
-  else if(idx===2) sCrystalChime(ctx);
-  else if(idx===3) sDeepDrone(ctx);
-  else if(idx===4) sSignalBurst(ctx);
-  else sWarpSpeed(ctx);
+function playSound(n) {
+  try {
+    var ctx = getCtx();
+    var idx = n % 6;
+    if (idx===0) sCosmicBell(ctx);
+    else if (idx===1) sRisingPulse(ctx);
+    else if (idx===2) sCrystalChime(ctx);
+    else if (idx===3) sDeepDrone(ctx);
+    else if (idx===4) sSignalBurst(ctx);
+    else sWarpSpeed(ctx);
+  } catch(e) {}
 }
-function sCosmicBell(ctx){
-  var t=ctx.currentTime;
-  [[440,1],[880,.6],[1320,.35],[2200,.2]].forEach(function(pair,i){
-    var f=pair[0],g=pair[1];
-    var osc=ctx.createOscillator(),gn=ctx.createGain();
-    osc.type="sine";osc.frequency.setValueAtTime(f,t);
-    gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(g*.5,t+.02);
-    gn.gain.exponentialRampToValueAtTime(.0001,t+3+i*.5);
-    osc.connect(gn);gn.connect(ctx.destination);osc.start(t);osc.stop(t+4);
+function sCosmicBell(ctx) {
+  var t = ctx.currentTime;
+  [[440,1],[880,.6],[1320,.35],[2200,.2]].forEach(function(p,i){
+    var osc=ctx.createOscillator(), g=ctx.createGain();
+    osc.type="sine"; osc.frequency.setValueAtTime(p[0],t);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(p[1]*.5,t+.02);
+    g.gain.exponentialRampToValueAtTime(.0001,t+3+i*.5);
+    osc.connect(g); g.connect(ctx.destination); osc.start(t); osc.stop(t+4);
   });
 }
-function sRisingPulse(ctx){
-  var t=ctx.currentTime;
-  var osc=ctx.createOscillator(),gn=ctx.createGain();
-  var lfo=ctx.createOscillator(),lg=ctx.createGain();
-  osc.type="sine";osc.frequency.setValueAtTime(180,t);osc.frequency.exponentialRampToValueAtTime(1800,t+2.5);
-  lfo.type="sine";lfo.frequency.setValueAtTime(8,t);lg.gain.setValueAtTime(50,t);
-  lfo.connect(lg);lg.connect(osc.frequency);
-  gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(.45,t+.1);gn.gain.exponentialRampToValueAtTime(.0001,t+2.8);
-  osc.connect(gn);gn.connect(ctx.destination);osc.start(t);osc.stop(t+3);lfo.start(t);lfo.stop(t+3);
+function sRisingPulse(ctx) {
+  var t = ctx.currentTime;
+  var osc=ctx.createOscillator(), gn=ctx.createGain(), lfo=ctx.createOscillator(), lg=ctx.createGain();
+  osc.type="sine"; osc.frequency.setValueAtTime(180,t); osc.frequency.exponentialRampToValueAtTime(1800,t+2.5);
+  lfo.type="sine"; lfo.frequency.setValueAtTime(8,t); lg.gain.setValueAtTime(50,t);
+  lfo.connect(lg); lg.connect(osc.frequency);
+  gn.gain.setValueAtTime(0,t); gn.gain.linearRampToValueAtTime(.45,t+.1); gn.gain.exponentialRampToValueAtTime(.0001,t+2.8);
+  osc.connect(gn); gn.connect(ctx.destination); osc.start(t); osc.stop(t+3); lfo.start(t); lfo.stop(t+3);
 }
-function sCrystalChime(ctx){
-  var t=ctx.currentTime;
+function sCrystalChime(ctx) {
+  var t = ctx.currentTime;
   [2000,2500,3000,3600,4400].forEach(function(f,i){
-    var osc=ctx.createOscillator(),gn=ctx.createGain();
-    var d=i*.11;
-    osc.type="sine";osc.frequency.setValueAtTime(f,t+d);
-    gn.gain.setValueAtTime(0,t+d);gn.gain.linearRampToValueAtTime(.4,t+d+.01);gn.gain.exponentialRampToValueAtTime(.0001,t+d+1.3);
-    osc.connect(gn);gn.connect(ctx.destination);osc.start(t+d);osc.stop(t+d+1.5);
+    var d=i*.11, osc=ctx.createOscillator(), gn=ctx.createGain();
+    osc.type="sine"; osc.frequency.setValueAtTime(f,t+d);
+    gn.gain.setValueAtTime(0,t+d); gn.gain.linearRampToValueAtTime(.4,t+d+.01); gn.gain.exponentialRampToValueAtTime(.0001,t+d+1.3);
+    osc.connect(gn); gn.connect(ctx.destination); osc.start(t+d); osc.stop(t+d+1.5);
   });
 }
-function sDeepDrone(ctx){
-  var t=ctx.currentTime;
-  [[80,1],[160,.5],[240,.25]].forEach(function(pair){
-    var f=pair[0],g=pair[1];
-    var osc=ctx.createOscillator(),gn=ctx.createGain();
-    osc.type="sine";osc.frequency.setValueAtTime(f,t);
-    gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(g*.55,t+.4);gn.gain.setValueAtTime(g*.55,t+1.6);gn.gain.exponentialRampToValueAtTime(.0001,t+4);
-    osc.connect(gn);gn.connect(ctx.destination);osc.start(t);osc.stop(t+4.5);
+function sDeepDrone(ctx) {
+  var t = ctx.currentTime;
+  [[80,1],[160,.5],[240,.25]].forEach(function(p){
+    var osc=ctx.createOscillator(), gn=ctx.createGain();
+    osc.type="sine"; osc.frequency.setValueAtTime(p[0],t);
+    gn.gain.setValueAtTime(0,t); gn.gain.linearRampToValueAtTime(p[1]*.55,t+.4);
+    gn.gain.setValueAtTime(p[1]*.55,t+1.6); gn.gain.exponentialRampToValueAtTime(.0001,t+4);
+    osc.connect(gn); gn.connect(ctx.destination); osc.start(t); osc.stop(t+4.5);
   });
 }
-function sSignalBurst(ctx){
-  var t=ctx.currentTime;
+function sSignalBurst(ctx) {
+  var t = ctx.currentTime;
   [440,550,660,880,1100,880,660].forEach(function(f,i){
-    var osc=ctx.createOscillator(),gn=ctx.createGain();
-    var d=i*.08;
-    osc.type="square";osc.frequency.setValueAtTime(f,t+d);
-    gn.gain.setValueAtTime(.28,t+d);gn.gain.exponentialRampToValueAtTime(.0001,t+d+.12);
-    osc.connect(gn);gn.connect(ctx.destination);osc.start(t+d);osc.stop(t+d+.15);
+    var d=i*.08, osc=ctx.createOscillator(), gn=ctx.createGain();
+    osc.type="square"; osc.frequency.setValueAtTime(f,t+d);
+    gn.gain.setValueAtTime(.28,t+d); gn.gain.exponentialRampToValueAtTime(.0001,t+d+.12);
+    osc.connect(gn); gn.connect(ctx.destination); osc.start(t+d); osc.stop(t+d+.15);
   });
 }
-function sWarpSpeed(ctx){
-  var t=ctx.currentTime;
-  var osc=ctx.createOscillator(),gn=ctx.createGain();
-  osc.type="sawtooth";
-  osc.frequency.setValueAtTime(2200,t);osc.frequency.exponentialRampToValueAtTime(80,t+1.1);osc.frequency.exponentialRampToValueAtTime(1400,t+2.6);
-  gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(.38,t+.05);gn.gain.setValueAtTime(.38,t+2.1);gn.gain.exponentialRampToValueAtTime(.0001,t+3);
-  osc.connect(gn);gn.connect(ctx.destination);osc.start(t);osc.stop(t+3.5);
+function sWarpSpeed(ctx) {
+  var t = ctx.currentTime;
+  var osc=ctx.createOscillator(), gn=ctx.createGain();
+  osc.type="sawtooth"; osc.frequency.setValueAtTime(2200,t);
+  osc.frequency.exponentialRampToValueAtTime(80,t+1.1); osc.frequency.exponentialRampToValueAtTime(1400,t+2.6);
+  gn.gain.setValueAtTime(0,t); gn.gain.linearRampToValueAtTime(.38,t+.05);
+  gn.gain.setValueAtTime(.38,t+2.1); gn.gain.exponentialRampToValueAtTime(.0001,t+3);
+  osc.connect(gn); gn.connect(ctx.destination); osc.start(t); osc.stop(t+3.5);
 }
 
-/* ---------- CANVAS ANIMATIONS ---------- */
-var canvas=document.getElementById("anim-canvas");
-var c2=canvas.getContext("2d");
-var animRAF=null;
+/* ===== CANVAS ANIMATIONS ===== */
+var canvas = document.getElementById("anim-canvas");
+var c2 = canvas.getContext("2d");
 
-function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
-window.addEventListener("resize",resizeCanvas);resizeCanvas();
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
 
-function seeded(seed){
-  var s=seed;
-  return function(){s=(s*16807)%2147483647;return(s-1)/2147483646;};
+function seeded(seed) {
+  var s = seed;
+  return function(){ s = (s*16807) % 2147483647; return (s-1)/2147483646; };
 }
 
-function runAnim(idx,onDone){
-  if(animRAF){cancelAnimationFrame(animRAF);animRAF=null;}
-  c2.clearRect(0,0,canvas.width,canvas.height);
-  var n=idx%6, dur=3200, start=performance.now();
-  var bg=COLORS[colorIdx].bg, ac=COLORS[colorIdx].ac;
-  function frame(now){
-    var t=Math.min((now-start)/dur,1);
-    c2.clearRect(0,0,canvas.width,canvas.height);
-    var alpha=t<.15?t/.15:t>.78?(1-t)/.22:1;
-    c2.globalAlpha=alpha;
-    if(n===0)aPortalRings(t,bg,ac);
-    else if(n===1)aParticles(t,bg,ac);
-    else if(n===2)aStarWarp(t,bg,ac);
-    else if(n===3)aOrbitals(t,bg,ac);
-    else if(n===4)aCascade(t,bg,ac);
+function runAnim(idx, onDone) {
+  if (animRAF) { cancelAnimationFrame(animRAF); animRAF = null; }
+  c2.clearRect(0, 0, canvas.width, canvas.height);
+  var n = idx % 6, dur = 3000, start = performance.now();
+  var bg = COLORS[colorIdx].bg, ac = COLORS[colorIdx].ac;
+  function frame(now) {
+    var t = Math.min((now - start) / dur, 1);
+    c2.clearRect(0, 0, canvas.width, canvas.height);
+    var alpha = t < .15 ? t/.15 : t > .78 ? (1-t)/.22 : 1;
+    c2.globalAlpha = alpha;
+    if (n===0) aPortalRings(t,bg,ac);
+    else if (n===1) aParticles(t,bg,ac);
+    else if (n===2) aStarWarp(t,bg,ac);
+    else if (n===3) aOrbitals(t,bg,ac);
+    else if (n===4) aCascade(t,bg,ac);
     else aBloom(t,bg,ac);
-    c2.globalAlpha=1;
-    if(t<1)animRAF=requestAnimationFrame(frame);
-    else{c2.clearRect(0,0,canvas.width,canvas.height);if(onDone)onDone();}
+    c2.globalAlpha = 1;
+    if (t < 1) animRAF = requestAnimationFrame(frame);
+    else { c2.clearRect(0,0,canvas.width,canvas.height); if (onDone) onDone(); }
   }
-  animRAF=requestAnimationFrame(frame);
+  animRAF = requestAnimationFrame(frame);
 }
 
-function aPortalRings(t,bg,ac){
-  var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
-  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
-  var maxR=Math.sqrt(W*W+H*H)*.6;
-  for(var i=0;i<8;i++){
+function aPortalRings(t,bg,ac) {
+  var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,maxR=Math.sqrt(W*W+H*H)*.6;
+  c2.fillStyle=bg; c2.fillRect(0,0,W,H);
+  for (var i=0;i<8;i++) {
     var ph=i/8,r=((t+ph)%1)*maxR,a=1-((t+ph)%1);
-    c2.strokeStyle=i%2===0?ac:"#ffffff";c2.lineWidth=2+i*1.5;
-    var prev=c2.globalAlpha;c2.globalAlpha*=a;
-    c2.beginPath();c2.arc(cx,cy,r,0,Math.PI*2);c2.stroke();
+    c2.strokeStyle=i%2===0?ac:"#ffffff"; c2.lineWidth=2+i*1.5;
+    var prev=c2.globalAlpha; c2.globalAlpha*=a;
+    if(r>0){c2.beginPath(); c2.arc(cx,cy,Math.max(0.5,r),0,Math.PI*2); c2.stroke();}
     c2.globalAlpha=prev;
   }
 }
-function aParticles(t,bg,ac){
+function aParticles(t,bg,ac) {
   var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
-  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
-  var count=70;
+  c2.fillStyle=bg; c2.fillRect(0,0,W,H);
   var ease=t<.5?2*t*t:(4-2*t)*t-1;
-  for(var i=0;i<count;i++){
-    var angle=(i/count)*Math.PI*2;
-    var spd=120+((i*37)%200);
-    var r=ease*spd;
-    var x=cx+Math.cos(angle)*r,y=cy+Math.sin(angle)*r;
-    var sz=(1-t)*9+1.5;
+  for (var i=0;i<70;i++) {
+    var angle=(i/70)*Math.PI*2,spd=120+((i*37)%200),r=ease*spd;
+    var x=cx+Math.cos(angle)*r,y=cy+Math.sin(angle)*r,sz=(1-t)*9+1.5;
     c2.fillStyle=i%3===0?ac:"#ffffff";
-    c2.beginPath();c2.arc(x,y,sz,0,Math.PI*2);c2.fill();
+    if(sz>0){c2.beginPath(); c2.arc(x,y,Math.max(0.5,sz),0,Math.PI*2); c2.fill();}
   }
 }
-function aStarWarp(t,bg,ac){
+function aStarWarp(t,bg,ac) {
   var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
-  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
+  c2.fillStyle=bg; c2.fillRect(0,0,W,H);
   var rng=seeded(42);
-  for(var i=0;i<100;i++){
-    var angle=rng()*Math.PI*2;
-    var startR=rng()*20+5;
-    var endR=Math.max(W,H)*.75;
-    var r=startR+(endR-startR)*t;
-    var len=t*22+2;
-    var x=cx+Math.cos(angle)*r,y=cy+Math.sin(angle)*r;
-    var x0=cx+Math.cos(angle)*(r-len),y0=cy+Math.sin(angle)*(r-len);
-    c2.strokeStyle=i%4===0?ac:"#ffffff";c2.lineWidth=1.5;
-    c2.beginPath();c2.moveTo(x0,y0);c2.lineTo(x,y);c2.stroke();
+  for (var i=0;i<100;i++) {
+    var angle=rng()*Math.PI*2,startR=rng()*20+5,endR=Math.max(W,H)*.75;
+    var r=startR+(endR-startR)*t,len=t*22+2;
+    c2.strokeStyle=i%4===0?ac:"#ffffff"; c2.lineWidth=1.5;
+    c2.beginPath();
+    c2.moveTo(cx+Math.cos(angle)*(r-len),cy+Math.sin(angle)*(r-len));
+    c2.lineTo(cx+Math.cos(angle)*r,cy+Math.sin(angle)*r);
+    c2.stroke();
   }
 }
-function aOrbitals(t,bg,ac){
-  var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
-  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
-  var baseR=Math.min(W,H)*.26;
-  for(var i=0;i<5;i++){
-    var spd=.6+i*.25,ph=(i/5)*Math.PI*2;
-    var angle=t*Math.PI*4*spd+ph;
-    var orb=baseR*(0.4+i*.14);
-    var x=cx+Math.cos(angle)*orb,y=cy+Math.sin(angle)*orb;
-    var sz=Math.max(8,28-i*4);
+function aOrbitals(t,bg,ac) {
+  var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,baseR=Math.min(W,H)*.26;
+  c2.fillStyle=bg; c2.fillRect(0,0,W,H);
+  for (var i=0;i<5;i++) {
+    var spd=.6+i*.25,ph=(i/5)*Math.PI*2,angle=t*Math.PI*4*spd+ph;
+    var orb=baseR*(0.4+i*.14),x=cx+Math.cos(angle)*orb,y=cy+Math.sin(angle)*orb,sz=Math.max(8,28-i*4);
     c2.fillStyle=i%2===0?ac:"#ffffff";
-    c2.beginPath();c2.ellipse(x,y,sz*(1+t*.25),sz*(1-t*.18),angle,0,Math.PI*2);c2.fill();
+    var rx=Math.max(0.5,sz*(1+t*.25)),ry=Math.max(0.5,sz*(1-t*.18)); c2.beginPath(); c2.ellipse(x,y,rx,ry,angle,0,Math.PI*2); c2.fill();
   }
 }
-function aCascade(t,bg,ac){
-  var W=canvas.width,H=canvas.height;
-  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
-  var cols=14,cw=W/cols;
-  for(var col=0;col<cols;col++){
-    var delay=(col/cols)*.5;
-    var ct=Math.max(0,(t-delay)/(1-delay));
-    var h=ct*H*1.4;
+function aCascade(t,bg,ac) {
+  var W=canvas.width,H=canvas.height,cols=14,cw=W/cols;
+  c2.fillStyle=bg; c2.fillRect(0,0,W,H);
+  for (var col=0;col<cols;col++) {
+    var delay=(col/cols)*.5,ct=Math.max(0,(t-delay)/(1-delay)),h=ct*H*1.4;
     var prev=c2.globalAlpha;
-    c2.fillStyle=col%3===0?ac:"#000000";
-    c2.globalAlpha=.12+ct*.55;
-    c2.fillRect(col*cw,0,cw-1,h);
-    c2.globalAlpha=prev;
-    for(var row=0;row<10;row++){
+    c2.fillStyle=col%3===0?ac:"#000000"; c2.globalAlpha=.12+ct*.55;
+    c2.fillRect(col*cw,0,cw-1,h); c2.globalAlpha=prev;
+    for (var row=0;row<10;row++) {
       var ry=(row/10)*H;
-      if(ry<h){
-        c2.fillStyle=col%2===0?ac:"#ffffff";
-        c2.globalAlpha=Math.max(0,1-ry/H)*prev;
-        c2.beginPath();c2.arc(col*cw+cw/2,ry,3,0,Math.PI*2);c2.fill();
-        c2.globalAlpha=prev;
+      if (ry<h) {
+        c2.fillStyle=col%2===0?ac:"#ffffff"; c2.globalAlpha=Math.max(0,1-ry/H)*prev;
+        c2.beginPath(); c2.arc(col*cw+cw/2,ry,3,0,Math.PI*2); c2.fill(); c2.globalAlpha=prev;
       }
     }
   }
 }
-function aBloom(t,bg,ac){
-  var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
-  c2.fillStyle=bg;c2.fillRect(0,0,W,H);
-  var petals=12,r=Math.min(W,H)*.36*t;
+function aBloom(t,bg,ac) {
+  var W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,r=Math.min(W,H)*.36*t;
+  c2.fillStyle=bg; c2.fillRect(0,0,W,H);
   var prev=c2.globalAlpha;
-  for(var i=0;i<petals;i++){
-    var angle=(i/petals)*Math.PI*2+t*Math.PI*.5;
-    c2.save();c2.translate(cx,cy);c2.rotate(angle);
-    c2.fillStyle=i%2===0?ac:"#ffffff";c2.globalAlpha=prev*.75;
-    c2.beginPath();c2.ellipse(r/2,0,r*.52,r*.2,0,0,Math.PI*2);c2.fill();
-    c2.restore();
+  for (var i=0;i<12;i++) {
+    var angle=(i/12)*Math.PI*2+t*Math.PI*.5;
+    c2.save(); c2.translate(cx,cy); c2.rotate(angle);
+    c2.fillStyle=i%2===0?ac:"#ffffff"; c2.globalAlpha=prev*.75;
+    var bx=Math.max(0.5,r*.52),by=Math.max(0.5,r*.2); c2.beginPath(); c2.ellipse(Math.max(0,r/2),0,bx,by,0,0,Math.PI*2); c2.fill(); c2.restore();
   }
-  c2.fillStyle=ac;c2.globalAlpha=prev*.95;
-  c2.beginPath();c2.arc(cx,cy,r*.22,0,Math.PI*2);c2.fill();
-  c2.globalAlpha=prev;
+  c2.fillStyle=ac; c2.globalAlpha=prev*.95;
+  if(r>.1){c2.beginPath(); c2.arc(cx,cy,Math.max(0.5,r*.22),0,Math.PI*2); c2.fill();} c2.globalAlpha=prev;
 }
 
-/* ---------- TIMER END ---------- */
-function timerEndSeq(onDone){
-  var overlay=document.getElementById("overlay");
-  var msg=document.getElementById("overlay-msg");
-  msg.textContent=ANIM_LABELS[animIdx%6];
-  overlay.classList.add("show");
-  try{playSound(soundIdx);}catch(e){}
-  runAnim(animIdx,function(){
-    overlay.classList.remove("show");
-    soundIdx++;animIdx++;
-    if(onDone)onDone();
-  });
+/* ===== END-OF-TIMER ANIMATION (with guaranteed fallback) ===== */
+function fireEndAnim(onDone) {
+  var done = false;
+  function proceed() {
+    if (done) return;
+    done = true;
+    document.getElementById("overlay").classList.remove("show");
+    if (onDone) onDone();
+  }
+  document.getElementById("overlay-msg").textContent = ANIM_LABELS[animIdx % 6];
+  document.getElementById("overlay").classList.add("show");
+  playSound(soundIdx);
+  runAnim(animIdx, proceed);
+  soundIdx++; animIdx++;
+  setTimeout(proceed, 4000); // guaranteed exit
 }
 
-/* ---------- SPIN ---------- */
-function spin(finalPrompt,isGlitch){
-  nextColor();show("s-spin");
-  var el=document.getElementById("spin-text"),lbl=document.getElementById("spin-label");
-  el.classList.add("spinning");lbl.textContent="Scanning signals";
-  var all=PROMPTS.all,count=0,total=20,delay=70;
-  function step(){
-    var p=pick(all),words=p.split(" ");
-    el.textContent=words.slice(0,4).join(" ")+"...";
+/* ===== TIMER FACTORY ===== */
+function makeTimer(cfg) {
+  // cfg: { secs, bigId, labelId, halfwayId, halfwaySecs, timerLabel,
+  //        pauseIconId, pauseLabelId, onDone }
+  clearTimer();
+  var remaining = cfg.secs;
+  var paused = false;
+
+  function fmt() {
+    var m=Math.floor(remaining/60), s=remaining%60;
+    document.getElementById(cfg.bigId).textContent = m+":"+("0"+s).slice(-2);
+  }
+  function setPauseUI(p) {
+    document.getElementById(cfg.pauseIconId).innerHTML = p ? "&#9654;" : "&#9646;&#9646;";
+    document.getElementById(cfg.pauseLabelId).textContent = p ? "Resume" : "Pause";
+    if (cfg.labelId) document.getElementById(cfg.labelId).textContent = p ? "Paused \u2014 tap to resume" : cfg.timerLabel;
+  }
+
+  document.getElementById(cfg.bigId).classList.remove("done");
+  if (cfg.halfwayId) document.getElementById(cfg.halfwayId).classList.remove("show");
+  if (cfg.labelId) document.getElementById(cfg.labelId).textContent = cfg.timerLabel;
+  setPauseUI(false); fmt();
+
+  activeTimerInterval = setInterval(function() {
+    if (paused) return;
+    remaining--;
+    fmt();
+    if (cfg.halfwayId && cfg.halfwaySecs && remaining === cfg.halfwaySecs) {
+      document.getElementById(cfg.halfwayId).classList.add("show");
+    }
+    if (remaining <= 0) {
+      clearTimer();
+      document.getElementById(cfg.bigId).textContent = "0:00";
+      document.getElementById(cfg.bigId).classList.add("done");
+      if (cfg.labelId) document.getElementById(cfg.labelId).textContent = "Time\u2019s up";
+      setTimeout(function(){ if (cfg.onDone) cfg.onDone(); }, 500);
+    }
+  }, 1000);
+
+  return {
+    toggle: function() { paused = !paused; setPauseUI(paused); },
+    reset: function() {
+      clearTimer();
+      remaining = cfg.secs; paused = false;
+      document.getElementById(cfg.bigId).classList.remove("done");
+      if (cfg.halfwayId) document.getElementById(cfg.halfwayId).classList.remove("show");
+      if (cfg.labelId) document.getElementById(cfg.labelId).textContent = cfg.timerLabel;
+      setPauseUI(false); fmt();
+      activeTimerInterval = setInterval(arguments.callee.caller, 1000);
+      // restart via recursive call trick won't work — call makeTimer again
+    },
+    skip: function() { clearTimer(); if (cfg.onDone) cfg.onDone(); }
+  };
+}
+
+/* cleaner reset: just re-call makeTimer with same cfg */
+function startTimerPhase(cfg, restartId, pauseId, skipId) {
+  var t = makeTimer(cfg);
+  // Override reset to re-invoke startTimerPhase
+  document.getElementById(restartId).onclick = function(){ startTimerPhase(cfg, restartId, pauseId, skipId); };
+  document.getElementById(pauseId).onclick = function(){ t.toggle(); };
+  document.getElementById(skipId).onclick = function(){ t.skip(); };
+}
+
+/* ===== SPIN ===== */
+function spin(finalPrompt) {
+  nextColor(); show("s-spin");
+  var el = document.getElementById("spin-text"), lbl = document.getElementById("spin-label");
+  el.classList.add("spinning"); lbl.textContent = "Scanning signals";
+  var count = 0, total = 20, delay = 70;
+  function step() {
+    el.textContent = pick(PROMPTS.all).split(" ").slice(0,4).join(" ") + "...";
     count++;
-    if(count<total){
-      delay=70+Math.pow(count/total,2)*360;
-      setTimeout(step,delay);
-    } else {
-      el.classList.remove("spinning");
-      el.textContent=finalPrompt;
-      lbl.textContent=isGlitch?"Signal interference":"Signal locked";
-      setTimeout(function(){revealPrompt(finalPrompt,isGlitch);},700);
+    if (count < total) { delay = 70 + Math.pow(count/total, 2)*360; setTimeout(step, delay); }
+    else {
+      el.classList.remove("spinning"); el.textContent = finalPrompt;
+      lbl.textContent = "Signal locked";
+      setTimeout(function(){ startPrep(finalPrompt); }, 700);
     }
   }
   step();
 }
 
-function revealPrompt(prompt,isGlitch){
-  currentPrompt=prompt;round=1;
-  var el=document.getElementById("prompt-text");
-  var ey=document.getElementById("prompt-eyebrow");
-  var rb=document.getElementById("round-badge");
-  var ins=document.getElementById("prompt-instr");
-  el.textContent=prompt;
-  ey.textContent=isGlitch?"Unexpected signal":"Your signal";
-  rb.textContent="Round 1 of 2";
-  ins.innerHTML="<strong>Speaker:</strong> talk non-stop for 7 minutes.<br><strong>Mirror:</strong> listen silently, observe everything.";
-  el.classList.remove("enter","glitch");
-  void el.offsetWidth;
-  el.classList.add("enter");
-  if(isGlitch)setTimeout(function(){el.classList.add("glitch");},350);
-  show("s-prompt");
+/* ===== FLOW ===== */
+function startPrep(prompt) {
+  currentPrompt = prompt; nextColor();
+  document.getElementById("prep-prompt-text").textContent = prompt;
+  show("s-prep");
+  startTimerPhase(
+    {secs:60, bigId:"prep-big", labelId:"prep-label", halfwayId:null, halfwaySecs:null,
+     timerLabel:"Prep time", pauseIconId:"prep-pause-icon", pauseLabelId:"prep-pause-label",
+     onDone: startR1A},
+    "prep-restart","prep-pause","prep-skip"
+  );
 }
 
-/* ---------- TIMER (SPEAKER) ---------- */
-var mirrorSecs=180, mirrorInterval=null, mirrorPaused=false;
-var mirrorQuestions=[];
-
-function startTimer(){
-  stopTimer();timerSecs=420;paused=false;
-  var big=document.getElementById("timer-big");
-  big.classList.remove("done");
-  document.getElementById("timer-halfway").classList.remove("show");
-  document.getElementById("timer-label").textContent="Round "+round+" — Speak";
-  document.getElementById("timer-echo").textContent=currentPrompt;
-  setPauseUI("tc-pause-icon","tc-pause-label",false);
-  updateDisplay();show("s-timer");
-  timerInterval=setInterval(function(){
-    if(paused)return;
-    timerSecs--;updateDisplay();
-    if(timerSecs===210)document.getElementById("timer-halfway").classList.add("show");
-    if(timerSecs<=0){
-      stopTimer();
-      document.getElementById("timer-big").textContent="0:00";
-      document.getElementById("timer-big").classList.add("done");
-      document.getElementById("timer-label").textContent="Time’s up";
-      advanceToMirrorTimer();
-    }
-  },1000);
-}
-
-function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null;}paused=false;}
-
-function togglePause(){
-  if(timerSecs<=0)return;
-  paused=!paused;
-  setPauseUI("tc-pause-icon","tc-pause-label",paused);
-  document.getElementById("timer-label").textContent=paused?"Paused — tap to resume":"Round "+round+" — Speak";
-}
-
-function setPauseUI(iconId,labelId,isPaused){
-  document.getElementById(iconId).innerHTML=isPaused?"&#9654;":"&#9646;&#9646;";
-  document.getElementById(labelId).textContent=isPaused?"Resume":"Pause";
-}
-
-function updateDisplay(){
-  var m=Math.floor(timerSecs/60),s=timerSecs%60;
-  document.getElementById("timer-big").textContent=m+":"+("0"+s).slice(-2);
-}
-
-function advanceToMirrorTimer(){
-  stopTimer();
-  // Pick questions now so mirror timer can show them
-  mirrorQuestions=shuffle(MIRROR_POOL).slice(0,3);
-  // Safe timerEndSeq with fallback in case animation stalls
-  var done=false;
-  function proceed(){
-    if(done)return;done=true;
-    document.getElementById("overlay").classList.remove("show");
-    startMirrorTimer();
-  }
-  document.getElementById("overlay-msg").textContent=ANIM_LABELS[animIdx%6];
-  document.getElementById("overlay").classList.add("show");
-  try{playSound(soundIdx);}catch(e){}
-  runAnim(animIdx,proceed);
-  soundIdx++;animIdx++;
-  // Fallback: if animation hasn't resolved in 4s, force proceed
-  setTimeout(proceed,4000);
-}
-
-/* ---------- MIRROR TIMER (3 MIN) ---------- */
-function startMirrorTimer(){
-  stopMirrorTimer();mirrorSecs=180;mirrorPaused=false;
+function startR1A() {
   nextColor();
-  // Populate questions
-  var ul=document.getElementById("mt-qs");
-  ul.innerHTML="";
-  mirrorQuestions.forEach(function(q){
-    var li=document.createElement("li");li.textContent=q;ul.appendChild(li);
-  });
-  document.getElementById("mt-badge").textContent=round===1?"Round 1 — Mirror speaks":"Round 2 — Mirror speaks";
-  document.getElementById("mt-label").textContent="Share what you observed";
-  document.getElementById("mt-prompt-echo").textContent=currentPrompt;
-  document.getElementById("mt-big").classList.remove("done");
-  document.getElementById("mt-halfway").classList.remove("show");
-  setPauseUI("mtc-pause-icon","mtc-pause-label",false);
-  updateMirrorDisplay();show("s-mirror-timer");
-  mirrorInterval=setInterval(function(){
-    if(mirrorPaused)return;
-    mirrorSecs--;updateMirrorDisplay();
-    if(mirrorSecs===90)document.getElementById("mt-halfway").classList.add("show");
-    if(mirrorSecs<=0){
-      stopMirrorTimer();
-      document.getElementById("mt-big").textContent="0:00";
-      document.getElementById("mt-big").classList.add("done");
-      document.getElementById("mt-label").textContent="Time’s up";
-      setTimeout(advanceAfterMirror,600);
-    }
-  },1000);
+  document.getElementById("r1a-echo").textContent = currentPrompt;
+  show("s-r1a");
+  startTimerPhase(
+    {secs:420, bigId:"r1a-big", labelId:"r1a-label", halfwayId:"r1a-halfway", halfwaySecs:210,
+     timerLabel:"7 minutes", pauseIconId:"r1a-pause-icon", pauseLabelId:"r1a-pause-label",
+     onDone: function(){ fireEndAnim(startR1B); }},
+    "r1a-restart","r1a-pause","r1a-skip"
+  );
 }
 
-function stopMirrorTimer(){if(mirrorInterval){clearInterval(mirrorInterval);mirrorInterval=null;}mirrorPaused=false;}
-
-function toggleMirrorPause(){
-  if(mirrorSecs<=0)return;
-  mirrorPaused=!mirrorPaused;
-  setPauseUI("mtc-pause-icon","mtc-pause-label",mirrorPaused);
-  document.getElementById("mt-label").textContent=mirrorPaused?"Paused — tap to resume":"Share what you observed";
+function startR1B() {
+  nextColor(); show("s-r1b");
+  startTimerPhase(
+    {secs:180, bigId:"r1b-big", labelId:"r1b-label", halfwayId:"r1b-halfway", halfwaySecs:90,
+     timerLabel:"3 minutes", pauseIconId:"r1b-pause-icon", pauseLabelId:"r1b-pause-label",
+     onDone: function(){ fireEndAnim(showTurnaround); }},
+    "r1b-restart","r1b-pause","r1b-skip"
+  );
 }
 
-function updateMirrorDisplay(){
-  var m=Math.floor(mirrorSecs/60),s=mirrorSecs%60;
-  document.getElementById("mt-big").textContent=m+":"+("0"+s).slice(-2);
-}
+function showTurnaround() { nextColor(); show("s-turn"); }
 
-function advanceAfterMirror(){
-  stopMirrorTimer();
+function startR2A() {
   nextColor();
-  if(round===1){
-    showSwitchScreen();
-  } else {
-    show("s-end");
-    document.getElementById("end-area").value="";
-  }
+  document.getElementById("r2a-echo").textContent = currentPrompt;
+  show("s-r2a");
+  startTimerPhase(
+    {secs:420, bigId:"r2a-big", labelId:"r2a-label", halfwayId:"r2a-halfway", halfwaySecs:210,
+     timerLabel:"7 minutes", pauseIconId:"r2a-pause-icon", pauseLabelId:"r2a-pause-label",
+     onDone: function(){ fireEndAnim(startR2B); }},
+    "r2a-restart","r2a-pause","r2a-skip"
+  );
 }
 
-/* ---------- SWITCH SCREEN (uses existing s-mirror) ---------- */
-function showSwitchScreen(){
-  document.getElementById("mirror-badge").textContent="Round 1 done — switch roles";
-  var nextBtn=document.getElementById("btn-mirror-next");
-  nextBtn.textContent="Start Round 2";
-  nextBtn.onclick=startRound2;
-  // Clear mirror questions list (they were in the mirror timer)
-  document.getElementById("mirror-qs").innerHTML="";
-  show("s-mirror");
+function startR2B() {
+  nextColor(); show("s-r2b");
+  startTimerPhase(
+    {secs:180, bigId:"r2b-big", labelId:"r2b-label", halfwayId:"r2b-halfway", halfwaySecs:90,
+     timerLabel:"3 minutes", pauseIconId:"r2b-pause-icon", pauseLabelId:"r2b-pause-label",
+     onDone: function(){ fireEndAnim(showEnd); }},
+    "r2b-restart","r2b-pause","r2b-skip"
+  );
 }
 
-function startRound2(){
-  round=2;nextColor();
-  document.getElementById("round-badge").textContent="Round 2 of 2";
-  document.getElementById("prompt-instr").innerHTML="<strong>Switch!</strong> The mirror now speaks.<br>Same prompt. Your turn to go.";
-  show("s-prompt");
-}
+function showEnd() { nextColor(); show("s-end"); }
 
-function showMirror(){
-  // Now only called after round 2 mirror timer — go to end
-  nextColor();show("s-end");document.getElementById("end-area").value="";
-}
-
-function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null;}paused=false;}
-
-/* ---------- BINDINGS ---------- */
-document.getElementById("btn-spin").addEventListener("click",function(){
-  var g=Math.random()<.1;
-  spin(g?pick(GLITCH_PROMPTS):pick(PROMPTS.all),g);
+/* ===== BINDINGS ===== */
+document.getElementById("btn-spin").addEventListener("click", function(){
+  spin(pick(PROMPTS.all));
 });
-document.getElementById("btn-compass").addEventListener("click",function(){nextColor();show("s-compass");});
+document.getElementById("btn-compass").addEventListener("click", function(){
+  nextColor(); show("s-compass");
+});
 document.querySelectorAll(".compass-btn").forEach(function(b){
-  b.addEventListener("click",function(){spin(pick(PROMPTS[b.getAttribute("data-dir")]),false);});
+  b.addEventListener("click", function(){
+    spin(pick(PROMPTS[b.getAttribute("data-dir")]));
+  });
 });
-document.getElementById("btn-start-timer").addEventListener("click",startTimer);
-document.getElementById("btn-new").addEventListener("click",goHome);
-document.getElementById("btn-again").addEventListener("click",goHome);
-document.getElementById("btn-mirror-home").addEventListener("click",goHome);
+document.getElementById("btn-start-r2").addEventListener("click", startR2A);
+document.getElementById("btn-try-again").addEventListener("click", function(){
+  clearTimer(); nextColor();
+  setTimeout(function(){ spin(pick(PROMPTS.all)); }, 100);
+});
+document.getElementById("btn-home").addEventListener("click", goHome);
 
-// Speaker timer controls
-document.getElementById("timer-big").addEventListener("click",togglePause);
-document.getElementById("tc-restart").addEventListener("click",function(){startTimer();});
-document.getElementById("tc-pause").addEventListener("click",togglePause);
-document.getElementById("tc-skip").addEventListener("click",function(){advanceToMirrorTimer();});
+document.addEventListener("keydown", function(e){
+  if (e.code === "Escape") goHome();
+});
+document.addEventListener("touchmove", function(e){ e.preventDefault(); }, {passive:false});
 
-// Mirror timer controls
-document.getElementById("mt-big").addEventListener("click",toggleMirrorPause);
-document.getElementById("mtc-restart").addEventListener("click",function(){startMirrorTimer();});
-document.getElementById("mtc-pause").addEventListener("click",toggleMirrorPause);
-document.getElementById("mtc-skip").addEventListener("click",function(){stopMirrorTimer();advanceAfterMirror();});
 
-document.addEventListener("keydown",function(e){
-  if(e.code==="Space"){
-    e.preventDefault();
-    if(activeScreen==="s-timer")togglePause();
-    else if(activeScreen==="s-mirror-timer")toggleMirrorPause();
+/* ===== BRAND SHAPES LAYER ===== */
+var sc = document.getElementById("shapes-canvas");
+var sc2 = sc.getContext("2d");
+
+function resizeShapes() { sc.width = window.innerWidth; sc.height = window.innerHeight; }
+window.addEventListener("resize", resizeShapes);
+resizeShapes();
+
+// Manual rounded rect — replaces ctx.roundRect (not on mobile Safari)
+function rrect(ctx, x, y, w, h, r) {
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x+w, y,   x+w, y+r,   r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x+r, y+h);
+  ctx.arcTo(x,   y+h, x,   y+h-r, r);
+  ctx.lineTo(x,  y+r);
+  ctx.arcTo(x,   y,   x+r, y,     r);
+  ctx.closePath();
+}
+
+var SHAPE_TYPES = ["dot","plus","cross","dash","sparkle","tri","diamond","blob1","blob2","blob3","pill"];
+
+function initShapes() {
+  var out = [];
+  var count = 24;
+  for (var i = 0; i < count; i++) {
+    out.push({
+      type: SHAPE_TYPES[i % SHAPE_TYPES.length],
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      size: Math.random() * 0.65 + 0.35,
+      rot: Math.random() * Math.PI * 2,
+      rotV: (Math.random() - 0.5) * 0.007,
+      phase: Math.random() * Math.PI * 2,
+      pulseSpeed: 0.012 + Math.random() * 0.01,
+      alpha: 0.08 + Math.random() * 0.11
+    });
   }
-  if(e.code==="Escape")goHome();
-});
-document.addEventListener("touchmove",function(e){e.preventDefault();},{passive:false});
+  return out;
+}
 
+var shapes = initShapes();
+
+function drawShape(ctx, type, size, rot, alpha, ac) {
+  ctx.save();
+  ctx.rotate(rot);
+  ctx.fillStyle = ac;
+  ctx.globalAlpha = alpha;
+  var s = size * 20;
+
+  if (type === "dot") {
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(1, s * 0.5), 0, Math.PI * 2);
+    ctx.fill();
+
+  } else if (type === "plus") {
+    var t = Math.max(1, s * 0.22), r = t * 0.8;
+    rrect(ctx, -t, -s, t*2, s*2, r); ctx.fill();
+    rrect(ctx, -s, -t, s*2, t*2, r); ctx.fill();
+
+  } else if (type === "cross") {
+    ctx.rotate(Math.PI / 4);
+    var t3 = Math.max(1, s * 0.22), r3 = t3 * 0.8;
+    rrect(ctx, -t3, -s, t3*2, s*2, r3); ctx.fill();
+    rrect(ctx, -s, -t3, s*2, t3*2, r3); ctx.fill();
+
+  } else if (type === "dash") {
+    var h = Math.max(1, s * 0.28);
+    rrect(ctx, -s, -h, s*2, h*2, h); ctx.fill();
+
+  } else if (type === "pill") {
+    var pw = s * 1.9, ph = Math.max(1, s * 0.55);
+    rrect(ctx, -pw/2, -ph/2, pw, ph, ph); ctx.fill();
+
+  } else if (type === "sparkle") {
+    ctx.beginPath();
+    for (var k = 0; k < 8; k++) {
+      var a = (k / 8) * Math.PI * 2;
+      var sr = k % 2 === 0 ? s : Math.max(1, s * 0.22);
+      var kx = Math.cos(a) * sr, ky = Math.sin(a) * sr;
+      if (k === 0) ctx.moveTo(kx, ky); else ctx.lineTo(kx, ky);
+    }
+    ctx.closePath(); ctx.fill();
+
+  } else if (type === "tri") {
+    // Rounded triangle via arcTo
+    var p1x=0, p1y=-s, p2x=s*0.87, p2y=s*0.5, p3x=-s*0.87, p3y=s*0.5;
+    var tr = s * 0.12;
+    ctx.beginPath();
+    ctx.moveTo((p1x+p3x)/2, (p1y+p3y)/2);
+    ctx.arcTo(p1x, p1y, p2x, p2y, tr);
+    ctx.arcTo(p2x, p2y, p3x, p3y, tr);
+    ctx.arcTo(p3x, p3y, p1x, p1y, tr);
+    ctx.closePath(); ctx.fill();
+
+  } else if (type === "diamond") {
+    ctx.beginPath();
+    ctx.moveTo(0, -s);
+    ctx.lineTo(s * 0.72, 0);
+    ctx.lineTo(0, s);
+    ctx.lineTo(-s * 0.72, 0);
+    ctx.closePath(); ctx.fill();
+
+  } else if (type === "blob1") {
+    var b = s * 0.55;
+    ctx.beginPath();
+    ctx.moveTo(0, -s);
+    ctx.bezierCurveTo(b, -s*0.6,  b,   -s*0.1, 0, 0);
+    ctx.bezierCurveTo(-b, s*0.1, -b,    s*0.6,  0, s);
+    ctx.bezierCurveTo(b*1.4, s*0.6, b*1.4, s*0.1, 0, 0);
+    ctx.bezierCurveTo(-b*1.4, -s*0.1, -b*1.4, -s*0.6, 0, -s);
+    ctx.closePath(); ctx.fill();
+
+  } else if (type === "blob2") {
+    var bs = s * 0.8;
+    ctx.beginPath();
+    ctx.moveTo(bs, 0);
+    ctx.bezierCurveTo(bs, -bs*0.7,  bs*0.4,  -bs*1.1, 0, -bs*0.95);
+    ctx.bezierCurveTo(-bs*0.6, -bs*0.8, -bs*1.1, -bs*0.3, -bs*0.9, bs*0.3);
+    ctx.bezierCurveTo(-bs*0.7,  bs*0.9,  bs*0.3,  bs*1.0,  bs*0.7, bs*0.6);
+    ctx.bezierCurveTo(bs*1.1,   bs*0.2,  bs*1.0,  bs*0.4,  bs, 0);
+    ctx.closePath(); ctx.fill();
+
+  } else if (type === "blob3") {
+    var bl = s * 0.55;
+    ctx.beginPath();
+    ctx.moveTo(0, -bl*1.8);
+    ctx.bezierCurveTo( bl*0.7, -bl*1.8,  bl*1.8, -bl*0.7,  bl*1.8, 0);
+    ctx.bezierCurveTo( bl*1.8,  bl*0.7,  bl*0.7,  bl*1.8,  0,  bl*1.8);
+    ctx.bezierCurveTo(-bl*0.7,  bl*1.8, -bl*1.8,  bl*0.7, -bl*1.8, 0);
+    ctx.bezierCurveTo(-bl*1.8, -bl*0.7, -bl*0.7, -bl*1.8,  0, -bl*1.8);
+    ctx.closePath(); ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function tickShapes() {
+  var W = sc.width, H = sc.height;
+  sc2.clearRect(0, 0, W, H);
+  var now = performance.now() * 0.001;
+  var ac = COLORS[colorIdx].ac;
+  var pad = 90;
+
+  for (var i = 0; i < shapes.length; i++) {
+    var sh = shapes[i];
+    sh.x += sh.vx;
+    sh.y += sh.vy;
+    sh.rot += sh.rotV;
+    if (sh.x < -pad) sh.x = W + pad;
+    if (sh.x > W + pad) sh.x = -pad;
+    if (sh.y < -pad) sh.y = H + pad;
+    if (sh.y > H + pad) sh.y = -pad;
+    var pulse = 1 + Math.sin(now * sh.pulseSpeed * 6 + sh.phase) * 0.14;
+    var a = sh.alpha * (0.85 + Math.sin(now * sh.pulseSpeed * 4 + sh.phase) * 0.15);
+    sc2.save();
+    sc2.translate(sh.x, sh.y);
+    drawShape(sc2, sh.type, sh.size * pulse, sh.rot, a, ac);
+    sc2.restore();
+  }
+
+  requestAnimationFrame(tickShapes);
+}
+
+tickShapes();
 
 setColor(COLORS[0]);
+
 })();
+
 </script>
 </body>
 </html>
