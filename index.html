@@ -162,6 +162,14 @@ html,body{
 /* LANDING EXTRA SHAPES */
 .landing-shapes{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
 .landing-shapes svg{position:absolute;fill:var(--accent);transition:fill .5s cubic-bezier(.4,0,.2,1)}
+/* LANDING HOW-TO */
+.landing-how-wrap{margin-top:2rem;position:relative;z-index:2;max-width:min(420px,88vw)}
+.landing-how-title{font-size:clamp(.68rem,2.5vw,.78rem);font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--blk);opacity:.5;margin-bottom:.6rem}
+.landing-how{list-style:none;counter-reset:step}
+.landing-how li{counter-increment:step;font-size:clamp(.78rem,3vw,.9rem);color:var(--blk);line-height:1.5;padding:.45rem 0 .45rem 2rem;border-bottom:1px solid rgba(0,0,0,.12);position:relative}
+.landing-how li:last-child{border-bottom:none}
+.landing-how li::before{content:counter(step);position:absolute;left:0;top:.45rem;font-weight:900;font-size:clamp(.68rem,2.5vw,.78rem);opacity:.45;line-height:1.5}
+.landing-how-note{opacity:.55;font-style:italic}
 /* PREP SCREEN */
 .prep-prompt{font-size:clamp(1.6rem,6vw,3.8rem);font-weight:900;line-height:1.06;letter-spacing:-.03em;color:var(--blk);max-width:92vw;margin-bottom:1.4rem;position:relative;z-index:2}
 .prep-instr{font-size:clamp(.9rem,3.5vw,1.1rem);font-weight:400;color:var(--blk);opacity:.72;line-height:1.6;margin-bottom:1.8rem;position:relative;z-index:2;max-width:88vw}
@@ -208,10 +216,20 @@ html,body{
     <!-- JS-populated animated shapes specific to landing -->
   </div>
   <div class="landing-title">WAY<br>FINDER</div>
-  <p class="landing-sub">One prompt. Two voices. Walk and talk.</p>
+  <p class="landing-sub">Walkie Talkies: One prompt. Two voices. Walk and talk.</p>
   <div class="btn-row">
     <button class="btn-main" id="btn-spin">Find your signal</button>
     <button class="btn-ghost" id="btn-compass">Compass mode</button>
+  </div>
+  <div class="landing-how-wrap">
+    <p class="landing-how-title">How to Walkie Talkie</p>
+    <ol class="landing-how">
+      <li>Find your signal</li>
+      <li>Partner A speaks for 7 min — as fast as possible, no pauses <span class="landing-how-note">(let your subconscious lead)</span></li>
+      <li>Partner B is a silent mirror — absolutely no words, no sounds <span class="landing-how-note">(harder than it sounds)</span></li>
+      <li>Partner B reflects for 3 min</li>
+      <li>Switch</li>
+    </ol>
   </div>
 </div>
 
@@ -614,68 +632,104 @@ function fireEndAnim(onDone) {
   setTimeout(proceed, 4000); // guaranteed exit
 }
 
-/* ===== TIMER FACTORY ===== */
-function makeTimer(cfg) {
-  // cfg: { secs, bigId, labelId, halfwayId, halfwaySecs, timerLabel,
-  //        pauseIconId, pauseLabelId, onDone }
+/* ===== TIMER FACTORY =====
+   Uses wall-clock timestamps so the timer stays accurate when the
+   screen locks, the phone sleeps, or the tab is backgrounded.
+   Strategy: store endTime = Date.now() + remaining_ms, then each
+   tick recalculate remaining from (endTime - Date.now()).
+   Page Visibility API: when screen wakes, the next tick fires
+   immediately with the correct elapsed value.
+===== */
+function startTimerPhase(cfg, restartId, pauseId, skipId) {
   clearTimer();
-  var remaining = cfg.secs;
-  var paused = false;
 
-  function fmt() {
-    var m=Math.floor(remaining/60), s=remaining%60;
-    document.getElementById(cfg.bigId).textContent = m+":"+("0"+s).slice(-2);
+  var endTime = Date.now() + cfg.secs * 1000;
+  var pausedAt = null;          // timestamp when paused (null = running)
+  var halfwayFired = false;
+  var doneFired = false;
+
+  function fmt(remaining) {
+    var r = Math.max(0, remaining);
+    var m = Math.floor(r / 60), s = r % 60;
+    document.getElementById(cfg.bigId).textContent = m + ":" + ("0" + s).slice(-2);
   }
+
   function setPauseUI(p) {
     document.getElementById(cfg.pauseIconId).innerHTML = p ? "&#9654;" : "&#9646;&#9646;";
     document.getElementById(cfg.pauseLabelId).textContent = p ? "Resume" : "Pause";
-    if (cfg.labelId) document.getElementById(cfg.labelId).textContent = p ? "Paused \u2014 tap to resume" : cfg.timerLabel;
+    if (cfg.labelId) document.getElementById(cfg.labelId).textContent =
+      p ? "Paused \u2014 tap to resume" : cfg.timerLabel;
   }
 
+  // init display
   document.getElementById(cfg.bigId).classList.remove("done");
   if (cfg.halfwayId) document.getElementById(cfg.halfwayId).classList.remove("show");
   if (cfg.labelId) document.getElementById(cfg.labelId).textContent = cfg.timerLabel;
-  setPauseUI(false); fmt();
+  setPauseUI(false);
+  fmt(cfg.secs);
 
-  activeTimerInterval = setInterval(function() {
-    if (paused) return;
-    remaining--;
-    fmt();
-    if (cfg.halfwayId && cfg.halfwaySecs && remaining === cfg.halfwaySecs) {
+  function tick() {
+    if (pausedAt !== null) return; // paused — don't advance
+    var remaining = Math.round((endTime - Date.now()) / 1000);
+
+    fmt(remaining);
+
+    if (cfg.halfwayId && cfg.halfwaySecs && !halfwayFired && remaining <= cfg.halfwaySecs) {
+      halfwayFired = true;
       document.getElementById(cfg.halfwayId).classList.add("show");
     }
-    if (remaining <= 0) {
+
+    if (remaining <= 0 && !doneFired) {
+      doneFired = true;
       clearTimer();
       document.getElementById(cfg.bigId).textContent = "0:00";
       document.getElementById(cfg.bigId).classList.add("done");
       if (cfg.labelId) document.getElementById(cfg.labelId).textContent = "Time\u2019s up";
-      setTimeout(function(){ if (cfg.onDone) cfg.onDone(); }, 500);
+      setTimeout(function() { if (cfg.onDone) cfg.onDone(); }, 500);
     }
-  }, 1000);
+  }
 
-  return {
-    toggle: function() { paused = !paused; setPauseUI(paused); },
-    reset: function() {
-      clearTimer();
-      remaining = cfg.secs; paused = false;
-      document.getElementById(cfg.bigId).classList.remove("done");
-      if (cfg.halfwayId) document.getElementById(cfg.halfwayId).classList.remove("show");
-      if (cfg.labelId) document.getElementById(cfg.labelId).textContent = cfg.timerLabel;
-      setPauseUI(false); fmt();
-      activeTimerInterval = setInterval(arguments.callee.caller, 1000);
-      // restart via recursive call trick won't work — call makeTimer again
+  // Run every 500ms so wakeup lag is at most half a second visible
+  activeTimerInterval = setInterval(tick, 500);
+
+  // Page Visibility: fires immediately when screen wakes / tab re-focuses
+  function onVisible() {
+    if (document.visibilityState === "visible" && pausedAt === null) {
+      tick(); // snap display to correct time instantly
+    }
+  }
+  document.addEventListener("visibilitychange", onVisible);
+
+  // Stash cleanup so clearTimer removes the listener too
+  var _origClear = clearTimer;
+  clearTimer = function() {
+    document.removeEventListener("visibilitychange", onVisible);
+    clearTimer = _origClear; // restore
+    _origClear();
+  };
+
+  var controls = {
+    toggle: function() {
+      if (pausedAt === null) {
+        // Pause: record when we paused
+        pausedAt = Date.now();
+        setPauseUI(true);
+      } else {
+        // Resume: shift endTime forward by the paused duration
+        endTime += Date.now() - pausedAt;
+        pausedAt = null;
+        setPauseUI(false);
+        tick(); // immediate update
+      }
     },
     skip: function() { clearTimer(); if (cfg.onDone) cfg.onDone(); }
   };
-}
 
-/* cleaner reset: just re-call makeTimer with same cfg */
-function startTimerPhase(cfg, restartId, pauseId, skipId) {
-  var t = makeTimer(cfg);
-  // Override reset to re-invoke startTimerPhase
-  document.getElementById(restartId).onclick = function(){ startTimerPhase(cfg, restartId, pauseId, skipId); };
-  document.getElementById(pauseId).onclick = function(){ t.toggle(); };
-  document.getElementById(skipId).onclick = function(){ t.skip(); };
+  document.getElementById(restartId).onclick = function() {
+    startTimerPhase(cfg, restartId, pauseId, skipId);
+  };
+  document.getElementById(pauseId).onclick = function() { controls.toggle(); };
+  document.getElementById(skipId).onclick = function() { controls.skip(); };
 }
 
 /* ===== SPIN ===== */
